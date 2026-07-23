@@ -17,4 +17,9 @@ class DeviceInfoRepositoryImpl implements DeviceInfoRepository {
   Future<Map<String, dynamic>> getDeviceInfo() {
     return NativeChannel.getDeviceInfo();
   }
+
+  @override
+  Future<Map<String, dynamic>> getBatteryInfo() {
+    return NativeChannel.getBatteryInfo();
+  }
 }

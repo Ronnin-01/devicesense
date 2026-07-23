@@ -9,4 +9,5 @@
 /// methods it doesn't need.
 abstract interface class DeviceInfoRepository {
   Future<Map<String, dynamic>> getDeviceInfo();
+  Future<Map<String, dynamic>> getBatteryInfo();
 }
