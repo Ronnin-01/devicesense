@@ -7,8 +7,6 @@ import '../device_info/bloc/device_info_event.dart';
 import '../device_info/bloc/device_info_state.dart';
 import '../shared/widgets.dart';
 
-/// Route-level widget. Its only job is to create/provide the
-/// [DeviceInfoBloc] for this page — rendering lives in [_DeviceInfoView].
 class DeviceInfoPage extends StatelessWidget {
   const DeviceInfoPage({super.key});
 

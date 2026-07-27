@@ -1,5 +1,3 @@
-/// SOLID — Single Responsibility: events describe *what happened*, and
-/// nothing else — no data-fetching or UI logic lives here.
 sealed class DeviceInfoEvent {
   const DeviceInfoEvent();
 }

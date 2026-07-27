@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/pages/battery_page.dart';
 import '../features/pages/dashboard.dart';
 import '../features/pages/device_info_page.dart';
 import '../features/shared/widgets.dart';
@@ -10,17 +11,7 @@ class AppRouter {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const DashboardPage()),
       GoRoute(path: '/device-info', builder: (_, _) => const DeviceInfoPage()),
-      GoRoute(
-        path: '/battery',
-        builder: (_, _) => const ComingSoonPage(
-          title: 'Battery',
-          icon: Icons.battery_charging_full_rounded,
-          color: Color(0xFF00C853),
-          description:
-              'Level, charging state, health and temperature will show up '
-              'here once the battery platform channel is implemented.',
-        ),
-      ),
+      GoRoute(path: '/battery', builder: (_, _) => const BatteryInfoPage()),
       GoRoute(
         path: '/bluetooth',
         builder: (_, _) => const ComingSoonPage(

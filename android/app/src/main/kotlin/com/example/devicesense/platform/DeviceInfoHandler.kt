@@ -4,12 +4,6 @@ import android.os.Build
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
-/**
- * Reads publicly-documented [Build] fields only — manufacturer, model, board, SoC, etc. None of
- * these require a runtime permission and none identify a specific physical device: no IMEI, serial
- * number, Android ID, or other user-trackable identifier is read here. Keep it that way as this
- * handler grows.
- */
 class DeviceInfoHandler : MethodHandler {
 
     override val method: String = "getDeviceInfo"
@@ -43,13 +37,8 @@ class DeviceInfoHandler : MethodHandler {
                         "incremental" to Build.VERSION.INCREMENTAL,
                         "release" to Build.VERSION.RELEASE,
                         "baseOS" to Build.VERSION.BASE_OS,
-                        
                 )
 
-        // Build.SOC_MANUFACTURER / SOC_MODEL / ODM_SKU only exist on API
-        // 31+ (Android 12). Reading them unconditionally compiles fine
-        // but throws NoSuchFieldError at runtime on older OS versions —
-        // always guard SDK-gated Build fields behind a version check.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             info["socman"] = Build.SOC_MANUFACTURER
             info["socmodel"] = Build.SOC_MODEL

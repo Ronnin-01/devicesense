@@ -1,5 +1,7 @@
-import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../data/repositories/hardware_repository.dart';
 
 part 'battery_info_event.dart';
 part 'battery_info_state.dart';
@@ -9,7 +11,7 @@ class BatteryInfoBloc extends Bloc<BatteryInfoEvent, BatteryInfoState> {
     on<BatteryInfoRequested>(_onRequested);
   }
 
-  final BatteryInfoRepository _repository;
+  final HardwareRepository _repository;
 
   Future<void> _onRequested(
     BatteryInfoRequested event,
@@ -18,7 +20,8 @@ class BatteryInfoBloc extends Bloc<BatteryInfoEvent, BatteryInfoState> {
     emit(const BatteryInfoLoading());
     try {
       final data = await _repository.getBatteryInfo();
-      emit(BatteryInfoLoaded(data));
+      final history = await _repository.getBatteryHistory();
+      emit(BatteryInfoLoaded(data, history: [...history]));
     } catch (error) {
       emit(BatteryInfoError(error.toString()));
     }

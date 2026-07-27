@@ -1,18 +1,11 @@
 import 'package:flutter/services.dart';
 
-/// Thin wrapper around the `device_sense/native` platform channel.
-///
-/// This is the only file that knows a [MethodChannel] exists — every
-/// layer above it (repositories, blocs, widgets) only ever sees a plain
-/// `Future<Map<String, dynamic>>`.
 class NativeChannel {
   NativeChannel._();
 
   static const String _channelName = 'device_sense/native';
   static const MethodChannel _channel = MethodChannel(_channelName);
 
-  /// Reads publicly-documented device build info from the native side.
-  /// Throws a [PlatformException] if the native handler reports an error.
   static Future<Map<String, dynamic>> getDeviceInfo() async {
     final result = await _channel.invokeMapMethod<String, dynamic>(
       'getDeviceInfo',
@@ -27,5 +20,22 @@ class NativeChannel {
     );
 
     return result ?? {};
+  }
+
+  /// Reads the background-collected battery history, oldest first.
+  /// Read-only — nothing on the Dart side ever writes to this history;
+  /// only the native `BatterySamplingWorker` appends new samples.
+  static Future<List<Map<String, dynamic>>> getBatteryHistory() async {
+    final result = await _channel.invokeListMethod<Map<Object?, Object?>>(
+      'getBatteryHistory',
+    );
+
+    if (result == null) return [];
+
+    return result
+        .map(
+          (entry) => entry.map((key, value) => MapEntry(key.toString(), value)),
+        )
+        .toList();
   }
 }

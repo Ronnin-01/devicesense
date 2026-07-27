@@ -1,6 +1,7 @@
 package com.example.devicesense
 
 import com.example.devicesense.platform.BatteryHandler
+import com.example.devicesense.platform.BatteryHistoryHandler
 import com.example.devicesense.platform.DeviceInfoHandler
 import com.example.devicesense.platform.NativeBridge
 import io.flutter.embedding.android.FlutterActivity
@@ -18,6 +19,7 @@ class MainActivity : FlutterActivity() {
                                 listOf(
                                         DeviceInfoHandler(),
                                         BatteryHandler(applicationContext),
+                                        BatteryHistoryHandler(applicationContext),
                                 ),
                 )
 

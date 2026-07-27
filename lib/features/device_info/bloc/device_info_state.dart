@@ -1,7 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-/// SOLID — Single Responsibility: states only describe *what the UI
-/// should render*. They carry data, never behavior.
 sealed class DeviceInfoState extends Equatable {
   const DeviceInfoState();
 

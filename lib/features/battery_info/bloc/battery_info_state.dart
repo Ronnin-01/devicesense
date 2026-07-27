@@ -1,7 +1,5 @@
 part of 'battery_info_bloc.dart';
 
-/// SOLID — Single Responsibility: states only describe *what the UI
-/// should render*. They carry data, never behavior.
 sealed class BatteryInfoState extends Equatable {
   const BatteryInfoState();
 
@@ -18,12 +16,13 @@ class BatteryInfoLoading extends BatteryInfoState {
 }
 
 class BatteryInfoLoaded extends BatteryInfoState {
-  const BatteryInfoLoaded(this.data);
+  const BatteryInfoLoaded(this.data, {required this.history});
 
   final Map<String, dynamic> data;
+  final List<Map<String, dynamic>> history;
 
   @override
-  List<Object?> get props => [data];
+  List<Object?> get props => [data, history];
 }
 
 class BatteryInfoError extends BatteryInfoState {
