@@ -27,15 +27,14 @@ class DeviceSenseApplication : Application() {
                         // Don't sample when the battery is already critically low —
                         // avoid background work exactly when the user needs battery
                         // most. Deliberately NOT requiring charging: samples should
-                        // span both charging and discharging states, or a future
-                        // health estimate would only ever see one side of the story.
+                        // span both charging and discharging states.
                         .setRequiresBatteryNotLow(true)
                         .build()
 
         val request =
                 PeriodicWorkRequestBuilder<BatterySamplingWorker>(
-                                SAMPLING_INTERVAL_HOURS,
-                                TimeUnit.HOURS,
+                                SAMPLING_INTERVAL_MINUTES,
+                                TimeUnit.MINUTES,
                         )
                         .setConstraints(constraints)
                         .build()
@@ -54,6 +53,11 @@ class DeviceSenseApplication : Application() {
 
     private companion object {
         const val UNIQUE_WORK_NAME = "battery_sampling_work"
-        const val SAMPLING_INTERVAL_HOURS = 6L
+
+        // WorkManager's absolute floor is 15 minutes. 30 is allowed, but
+        // expect real-world gaps to occasionally run wider than 30 min —
+        // Doze/App Standby batch frequent periodic work more aggressively
+        // the higher the frequency, by design.
+        const val SAMPLING_INTERVAL_MINUTES = 30L
     }
 }

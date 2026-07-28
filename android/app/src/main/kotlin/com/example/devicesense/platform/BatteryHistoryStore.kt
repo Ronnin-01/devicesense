@@ -11,6 +11,11 @@ import org.json.JSONObject
  * Single Responsibility: this class only knows how to read/write history. It doesn't know how a
  * snapshot is produced ([BatterySnapshotProvider]) or how it reaches Dart ([BatteryHistoryHandler]
  * ).
+ *
+ * Scaling note: this stores the entire history as one JSON string and rewrites it in full on every
+ * append. That's fine at this sampling frequency and cap, but if the interval drops further or
+ * retention grows much larger, a SQLite table (row-per-sample, no full rewrite) would scale better
+ * than a single growing SharedPreferences value.
  */
 class BatteryHistoryStore(context: Context) {
 
@@ -44,7 +49,6 @@ class BatteryHistoryStore(context: Context) {
             val array = JSONArray(stored)
             (0 until array.length()).map { array.getJSONObject(it) }.toMutableList()
         } catch (error: Exception) {
-            // Corrupted or unexpected data — start fresh rather than crash.
             mutableListOf()
         }
     }
@@ -53,9 +57,8 @@ class BatteryHistoryStore(context: Context) {
         const val PREFS_NAME = "battery_history_prefs"
         const val KEY_HISTORY = "battery_history"
 
-        // Keep this bounded so a device that runs for years doesn't grow
-        // this file forever. At a 6-hour sampling interval, 500 entries
-        // is roughly 4 months of history.
-        const val MAX_ENTRIES = 500
+        // At a 30-minute sampling interval that's 48 samples/day, so
+        // 1500 entries is roughly 31 days of rolling history.
+        const val MAX_ENTRIES = 1500
     }
 }

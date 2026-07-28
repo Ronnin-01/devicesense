@@ -3,6 +3,7 @@ import 'dart:core';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 
 import '../../core/di/service_locator.dart';
@@ -95,7 +96,16 @@ class _BatteryInfoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Battery Information')),
+      appBar: AppBar(
+        title: const Text('Battery Information'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.show_chart_rounded),
+            tooltip: 'View trends',
+            onPressed: () => context.push('/battery/trends'),
+          ),
+        ],
+      ),
       body: BlocBuilder<BatteryInfoBloc, BatteryInfoState>(
         builder: (context, state) {
           if (state is BatteryInfoInitial || state is BatteryInfoLoading) {
@@ -164,27 +174,33 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Battery Status',
                   icon: Icons.battery_full_outlined,
                   children: [
-                    InfoRow(label: 'Battery Level', value: _batteryLevel(data)),
+                    ExpandableInfoTile(
+                      title: 'Battery Level',
+                      value: _batteryLevel(data),
+                    ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Level (secondary reading)',
+                    ExpandableInfoTile(
+                      title: 'Level (secondary reading)',
                       value: _levelCrossCheck(data),
                     ),
                     const Divider(),
-                    InfoRow(label: 'Status', value: _chargingStatus(data)),
+                    ExpandableInfoTile(
+                      title: 'Status',
+                      value: _chargingStatus(data),
+                    ),
                     const Divider(),
-                    InfoRow(
-                      label: 'OS Charging Flag',
+                    ExpandableInfoTile(
+                      title: 'OS Charging Flag',
                       value: _yesNo(data, 'isChargingFlag'),
                     ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Charging Source',
+                    ExpandableInfoTile(
+                      title: 'Charging Source',
                       value: field('chargingSource'),
                     ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Battery Present',
+                    ExpandableInfoTile(
+                      title: 'Battery Present',
                       value: _yesNo(data, 'isBatteryPresent'),
                     ),
                   ],
@@ -196,9 +212,12 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Battery Health',
                   icon: Icons.health_and_safety_outlined,
                   children: [
-                    InfoRow(label: 'Health', value: field('health')),
+                    ExpandableInfoTile(title: 'Health', value: field('health')),
                     const Divider(),
-                    InfoRow(label: 'Technology', value: field('technology')),
+                    ExpandableInfoTile(
+                      title: 'Technology',
+                      value: field('technology'),
+                    ),
                   ],
                 ),
 
@@ -208,10 +227,13 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Electrical Readings',
                   icon: Icons.bolt_outlined,
                   children: [
-                    InfoRow(label: 'Current Draw', value: _currentNow(data)),
+                    ExpandableInfoTile(
+                      title: 'Current Draw',
+                      value: _currentNow(data),
+                    ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Charge Remaining',
+                    ExpandableInfoTile(
+                      title: 'Charge Remaining',
                       value: _chargeCounter(data),
                     ),
                   ],
@@ -223,9 +245,12 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Battery Metrics',
                   icon: Icons.analytics_outlined,
                   children: [
-                    InfoRow(label: 'Voltage', value: _voltage(data)),
+                    ExpandableInfoTile(title: 'Voltage', value: _voltage(data)),
                     const Divider(),
-                    InfoRow(label: 'Temperature', value: _temperature(data)),
+                    ExpandableInfoTile(
+                      title: 'Temperature',
+                      value: _temperature(data),
+                    ),
                   ],
                 ),
 
@@ -235,20 +260,23 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Power State',
                   icon: Icons.settings_power_outlined,
                   children: [
-                    InfoRow(
-                      label: 'Battery Saver',
+                    ExpandableInfoTile(
+                      title: 'Battery Saver',
                       value: _yesNo(data, 'isPowerSaveMode'),
                     ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Screen Interactive',
+                    ExpandableInfoTile(
+                      title: 'Screen Interactive',
                       value: _yesNo(data, 'isScreenInteractive'),
                     ),
                     const Divider(),
-                    InfoRow(label: 'Doze Mode', value: _dozeMode(data)),
+                    ExpandableInfoTile(
+                      title: 'Doze Mode',
+                      value: _dozeMode(data),
+                    ),
                     const Divider(),
-                    InfoRow(
-                      label: 'Thermal Status',
+                    ExpandableInfoTile(
+                      title: 'Thermal Status',
                       value: _thermalStatus(data),
                     ),
                   ],
@@ -260,13 +288,22 @@ class _BatteryInfoView extends StatelessWidget {
                   title: 'Quick Summary',
                   icon: Icons.info_outline_rounded,
                   children: [
-                    InfoRow(label: 'Battery Level', value: _batteryLevel(data)),
+                    ExpandableInfoTile(
+                      title: 'Battery Level',
+                      value: _batteryLevel(data),
+                    ),
                     const Divider(),
-                    InfoRow(label: 'Health', value: field('health')),
+                    ExpandableInfoTile(title: 'Health', value: field('health')),
                     const Divider(),
-                    InfoRow(label: 'Charging', value: _chargingStatus(data)),
+                    ExpandableInfoTile(
+                      title: 'Charging',
+                      value: _chargingStatus(data),
+                    ),
                     const Divider(),
-                    InfoRow(label: 'Temperature', value: _temperature(data)),
+                    ExpandableInfoTile(
+                      title: 'Temperature',
+                      value: _temperature(data),
+                    ),
                   ],
                 ),
               ],

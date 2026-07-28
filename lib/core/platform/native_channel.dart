@@ -1,5 +1,8 @@
 import 'package:flutter/services.dart';
 
+import '../permissions/permission_status.dart';
+import '../permissions/permission_type.dart';
+
 class NativeChannel {
   NativeChannel._();
 
@@ -37,5 +40,35 @@ class NativeChannel {
           (entry) => entry.map((key, value) => MapEntry(key.toString(), value)),
         )
         .toList();
+  }
+
+  static Future<Map<String, dynamic>> getBluetoothInfo() async {
+    final result = await _channel.invokeMapMethod<String, dynamic>(
+      'getBluetoothCapabilities',
+    );
+
+    return result ?? {};
+  }
+
+  static Future<PermissionStatus> check(PermissionType permission) async {
+    final String value = await _channel.invokeMethod('permission', {
+      'action': 'check',
+      'permission': permission.name,
+    });
+
+    return PermissionStatus.values.firstWhere((e) => e.name == value);
+  }
+
+  static Future<PermissionStatus> request(PermissionType permission) async {
+    final String value = await _channel.invokeMethod('permission', {
+      'action': 'request',
+      'permission': permission.name,
+    });
+
+    return PermissionStatus.values.firstWhere((e) => e.name == value);
+  }
+
+  static Future<void> openSettings() {
+    return _channel.invokeMethod('permission', {'action': 'openSettings'});
   }
 }

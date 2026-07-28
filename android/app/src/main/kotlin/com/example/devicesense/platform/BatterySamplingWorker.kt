@@ -1,10 +1,10 @@
 package com.example.devicesense.platform
 
+// optional
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker.Result // shadows kotlin.Result in this file — required, not
-// optional
 import androidx.work.WorkerParameters
 
 /**

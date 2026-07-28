@@ -134,6 +134,13 @@ class _DashboardView extends StatelessWidget {
                       onTap: () => context.push('/battery'),
                     ),
                     CategoryCard(
+                      icon: Icons.settings_suggest_rounded,
+                      title: 'Permissions',
+                      subtitle: 'Device Permissions and settings',
+                      color: const Color.fromARGB(255, 213, 244, 89),
+                      onTap: () => context.push('/permissions'),
+                    ),
+                    CategoryCard(
                       icon: Icons.bluetooth_rounded,
                       title: 'Bluetooth',
                       subtitle: 'Paired & nearby devices',

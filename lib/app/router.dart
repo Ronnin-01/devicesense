@@ -1,7 +1,10 @@
+import 'package:devicesense/features/pages/permission_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/pages/battery_page.dart';
+import '../features/pages/battery_trends_page.dart';
+import '../features/pages/bluetooth_info_page.dart';
 import '../features/pages/dashboard.dart';
 import '../features/pages/device_info_page.dart';
 import '../features/shared/widgets.dart';
@@ -13,16 +16,11 @@ class AppRouter {
       GoRoute(path: '/device-info', builder: (_, _) => const DeviceInfoPage()),
       GoRoute(path: '/battery', builder: (_, _) => const BatteryInfoPage()),
       GoRoute(
-        path: '/bluetooth',
-        builder: (_, _) => const ComingSoonPage(
-          title: 'Bluetooth',
-          icon: Icons.bluetooth_rounded,
-          color: Color(0xFF2979FF),
-          description:
-              'Paired devices and nearby scan results will appear here '
-              'once Bluetooth support is wired up.',
-        ),
+        path: '/battery/trends',
+        builder: (_, _) => const BatteryTrendsPage(),
       ),
+      GoRoute(path: '/permissions', builder: (_, _) => const PermissionPage()),
+      GoRoute(path: '/bluetooth', builder: (_, _) => const BluetoothInfoPage()),
       GoRoute(
         path: '/wifi',
         builder: (_, _) => const ComingSoonPage(
