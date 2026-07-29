@@ -6,3 +6,7 @@ sealed class BluetoothInfoEvent {
 class BluetoothInfoRequested extends BluetoothInfoEvent {
   const BluetoothInfoRequested();
 }
+
+class BluetoothPairedDevices extends BluetoothInfoEvent {
+  const BluetoothPairedDevices();
+}

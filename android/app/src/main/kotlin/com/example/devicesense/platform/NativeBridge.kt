@@ -18,6 +18,7 @@ class NativeBridge(
                     BatteryHistoryHandler(context),
                     BluetoothHandler(context),
                     PairedDevicesHandler(activity),
+                    ConnectedDevicesHandler(context),
                     PermissionHandler(activity),
             )
 

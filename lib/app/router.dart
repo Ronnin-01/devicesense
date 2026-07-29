@@ -1,3 +1,4 @@
+import 'package:devicesense/features/pages/paired_device_page.dart';
 import 'package:devicesense/features/pages/permission_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,10 @@ class AppRouter {
       ),
       GoRoute(path: '/permissions', builder: (_, _) => const PermissionPage()),
       GoRoute(path: '/bluetooth', builder: (_, _) => const BluetoothInfoPage()),
+      GoRoute(
+        path: '/bluetooth/paired-devices',
+        builder: (_, _) => const PairedDevicesPage(),
+      ),
       GoRoute(
         path: '/wifi',
         builder: (_, _) => const ComingSoonPage(

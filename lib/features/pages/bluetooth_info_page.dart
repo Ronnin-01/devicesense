@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/di/service_locator.dart';
 import '../bluetooth_info/bloc/bluetooth_info_bloc.dart';
@@ -58,7 +59,16 @@ class _BluetoothInfoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Bluetooth Information")),
+      appBar: AppBar(
+        title: const Text('Bluetooth Information'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.devices_other_rounded),
+            tooltip: 'View trends',
+            onPressed: () => context.push('/bluetooth/paired-devices'),
+          ),
+        ],
+      ),
       body: BlocBuilder<BluetoothInfoBloc, BluetoothInfoState>(
         builder: (context, state) {
           if (state is BluetoothInfoLoading || state is BluetoothInfoInitial) {
