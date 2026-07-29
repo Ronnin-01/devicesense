@@ -71,4 +71,20 @@ class NativeChannel {
   static Future<void> openSettings() {
     return _channel.invokeMethod('permission', {'action': 'openSettings'});
   }
+
+  static Future<Map<String, dynamic>> getPairedDevices() async {
+    final result = await _channel.invokeMapMethod<String, dynamic>(
+      'getPairedDevices',
+    );
+
+    return result ?? {};
+  }
+
+  static Future<Map<String, dynamic>> getConnectedDevices() async {
+    final result = await _channel.invokeMapMethod<String, dynamic>(
+      'getConnectedDevices',
+    );
+
+    return result ?? {};
+  }
 }

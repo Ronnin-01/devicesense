@@ -30,18 +30,23 @@ class HardwareRepositoryImpl implements HardwareRepository {
   Future<PermissionResult> check(PermissionType permission) async {
     final status = await NativeChannel.check(permission);
 
-    return PermissionResult(status: status, permission: permission,);
+    return PermissionResult(status: status, permission: permission);
   }
 
   @override
   Future<PermissionResult> request(PermissionType permission) async {
     final status = await NativeChannel.request(permission);
 
-    return PermissionResult(status: status, permission: permission,);
+    return PermissionResult(status: status, permission: permission);
   }
 
   @override
   Future<void> openSettings() {
     return NativeChannel.openSettings();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPairedDevices() async {
+    return NativeChannel.getPairedDevices();
   }
 }

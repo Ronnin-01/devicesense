@@ -24,6 +24,15 @@ class BluetoothInfoLoaded extends BluetoothInfoState {
   List<Object?> get props => [data];
 }
 
+class BTDevicesLoaded extends BluetoothInfoState {
+  const BTDevicesLoaded(this.data);
+
+  final Map<String, dynamic> data;
+
+  @override
+  List<Object?> get props => [data];
+}
+
 class BluetoothInfoError extends BluetoothInfoState {
   const BluetoothInfoError(this.message);
 

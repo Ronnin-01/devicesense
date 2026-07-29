@@ -15,4 +15,6 @@ abstract interface class HardwareRepository {
   Future<PermissionResult> request(PermissionType permission);
 
   Future<void> openSettings();
+
+  Future<Map<String, dynamic>> getPairedDevices();
 }
