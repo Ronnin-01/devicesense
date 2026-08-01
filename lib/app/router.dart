@@ -1,12 +1,7 @@
 import 'package:devicesense/features/pages/paired_device_page.dart';
 import 'package:devicesense/features/pages/permission_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
-import '../core/di/service_locator.dart';
-import '../features/battery_info/bloc/bluetooth_discovery_bloc.dart';
-import '../features/battery_info/bloc/bluetooth_discovery_event.dart';
 import '../features/pages/battery_page.dart';
 import '../features/pages/battery_trends_page.dart';
 import '../features/pages/bluetooth_discovery_page.dart';
@@ -33,12 +28,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/bluetooth/bt-discovery',
-        builder: (_, _) => BlocProvider(
-          create: (_) =>
-              sl<BluetoothDiscoveryBloc>()
-                ..add(const BluetoothDiscoveryStarted()),
-          child: const BluetoothDebugPage(),
-        ),
+        builder: (_, _) => const BluetoothDiscoveryPage(),
       ),
       GoRoute(
         path: '/wifi',

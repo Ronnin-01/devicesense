@@ -16,3 +16,11 @@ class BluetoothDiscoveryStarted extends BluetoothDiscoveryEvent {
 class BluetoothDiscoveryStopped extends BluetoothDiscoveryEvent {
   const BluetoothDiscoveryStopped();
 }
+
+class BluetoothScanStartRequested extends BluetoothDiscoveryEvent {
+  const BluetoothScanStartRequested();
+}
+
+class BluetoothScanStopRequested extends BluetoothDiscoveryEvent {
+  const BluetoothScanStopRequested();
+}

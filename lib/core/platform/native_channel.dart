@@ -16,6 +16,13 @@ class NativeChannel {
     _discoveryChannelName,
   );
 
+  static const String _discoveryControlChannelName =
+      'device_sense/bluetooth_discovery_control';
+
+  static const MethodChannel _discoveryControlChannel = MethodChannel(
+    _discoveryControlChannelName,
+  );
+
   static Future<Map<String, dynamic>> getDeviceInfo() async {
     final result = await _channel.invokeMapMethod<String, dynamic>(
       'getDeviceInfo',
@@ -99,5 +106,28 @@ class NativeChannel {
     return _discoveryChannel.receiveBroadcastStream().map(
       (event) => Map<String, dynamic>.from(event),
     );
+  }
+
+  static Future<bool> startBluetoothDiscovery() async {
+    final started = await _discoveryControlChannel.invokeMethod<bool>(
+      'startBluetoothDiscovery',
+    );
+
+    return started ?? false;
+  }
+
+  static Future<bool> stopBluetoothDiscovery() async {
+    final stopped = await _discoveryControlChannel.invokeMethod<bool>(
+      'stopBluetoothDiscovery',
+    );
+
+    return stopped ?? false;
+  }
+
+  static Future<Map<String, dynamic>> getBluetoothDiscoveryStatus() async {
+    final result = await _discoveryControlChannel
+        .invokeMapMethod<String, dynamic>('getBluetoothDiscoveryStatus');
+
+    return result ?? {};
   }
 }
