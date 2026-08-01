@@ -25,6 +25,7 @@ enum class PermissionType {
                 "bluetoothScan" -> BLUETOOTH_SCAN
                 "location" -> LOCATION
                 "notification" -> NOTIFICATION
+                "BLUETOOTH_SCAN" -> BLUETOOTH_SCAN
                 else ->
                         throw IllegalArgumentException(
                                 "Unknown permission type: $value",

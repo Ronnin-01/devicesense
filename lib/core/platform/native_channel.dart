@@ -9,6 +9,13 @@ class NativeChannel {
   static const String _channelName = 'device_sense/native';
   static const MethodChannel _channel = MethodChannel(_channelName);
 
+  static const String _discoveryChannelName =
+      'device_sense/bluetooth_discovery';
+
+  static const EventChannel _discoveryChannel = EventChannel(
+    _discoveryChannelName,
+  );
+
   static Future<Map<String, dynamic>> getDeviceInfo() async {
     final result = await _channel.invokeMapMethod<String, dynamic>(
       'getDeviceInfo',
@@ -86,5 +93,11 @@ class NativeChannel {
     );
 
     return result ?? {};
+  }
+
+  static Stream<Map<String, dynamic>> bluetoothDiscoveryStream() {
+    return _discoveryChannel.receiveBroadcastStream().map(
+      (event) => Map<String, dynamic>.from(event),
+    );
   }
 }

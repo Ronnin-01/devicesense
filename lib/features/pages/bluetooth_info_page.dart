@@ -64,8 +64,13 @@ class _BluetoothInfoView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.devices_other_rounded),
-            tooltip: 'View trends',
+            tooltip: 'Paired devices',
             onPressed: () => context.push('/bluetooth/paired-devices'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.bluetooth_searching_rounded),
+            tooltip: ' BT discovery',
+            onPressed: () => context.push('/bluetooth/bt-discovery'),
           ),
         ],
       ),

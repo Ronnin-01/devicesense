@@ -1,8 +1,10 @@
 import 'package:get_it/get_it.dart';
 
+import '../../data/repositories/bluetooth_repository.dart';
 import '../../data/repositories/hardware_repository.dart';
 import '../../data/repositories/hardware_repository_impl.dart';
 import '../../features/battery_info/bloc/battery_info_bloc.dart';
+import '../../features/battery_info/bloc/bluetooth_discovery_bloc.dart';
 import '../../features/bluetooth_info/bloc/bluetooth_info_bloc.dart';
 import '../../features/device_info/bloc/device_info_bloc.dart';
 import '../../features/permissions/bloc/permission_bloc.dart';
@@ -16,6 +18,8 @@ Future<void> setupServiceLocator() async {
     () => const HardwareRepositoryImpl(),
   );
 
+  sl.registerLazySingleton<BluetoothRepository>(() => BluetoothRepository());
+
   // --- Presentation layer --------------------------------------------
   // Factory: a *fresh* Bloc per page. Blocs hold mutable, page-scoped
 
@@ -23,4 +27,7 @@ Future<void> setupServiceLocator() async {
   sl.registerFactory<BatteryInfoBloc>(() => BatteryInfoBloc(sl()));
   sl.registerFactory<BluetoothInfoBloc>(() => BluetoothInfoBloc(sl()));
   sl.registerFactory<PermissionBloc>(() => PermissionBloc(sl()));
+  sl.registerFactory<BluetoothDiscoveryBloc>(
+    () => BluetoothDiscoveryBloc(repository: sl<BluetoothRepository>()),
+  );
 }
