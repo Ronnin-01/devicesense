@@ -31,6 +31,17 @@ class MainActivity : FlutterActivity() {
 
                 bluetoothDiscoveryHandler = BluetoothDiscoveryHandler(applicationContext)
 
+                MethodChannel(
+                                flutterEngine.dartExecutor.binaryMessenger,
+                                DISCOVERY_CONTROL_CHANNEL,
+                        )
+                        .setMethodCallHandler { call, result ->
+                                bluetoothDiscoveryHandler.handleControlCall(
+                                        call,
+                                        result,
+                                )
+                        }
+
                 EventChannel(
                                 flutterEngine.dartExecutor.binaryMessenger,
                                 DISCOVERY_CHANNEL,
@@ -64,5 +75,7 @@ class MainActivity : FlutterActivity() {
         companion object {
                 private const val CHANNEL = "device_sense/native"
                 private const val DISCOVERY_CHANNEL = "device_sense/bluetooth_discovery"
+                private const val DISCOVERY_CONTROL_CHANNEL =
+                        "device_sense/bluetooth_discovery_control"
         }
 }
