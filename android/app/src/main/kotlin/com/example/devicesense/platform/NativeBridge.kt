@@ -19,6 +19,8 @@ class NativeBridge(
                     BluetoothHandler(context),
                     PairedDevicesHandler(activity),
                     ConnectedDevicesHandler(context),
+                    WifiCapabilitiesHandler(context), // adapter capabilities, no permission needed
+                    WifiInfoHandler(context), // connected network details, needs FINE_LOCATION
                     PermissionHandler(activity),
             )
 
