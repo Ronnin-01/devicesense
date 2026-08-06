@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
 import '../../../core/platform/native_channel.dart';
-import '../../../data/repositories/hardware_repository.dart';
+import '../../../data/repositories/hardware/hardware_repository.dart';
 import 'bluetooth_info_event.dart';
 import 'bluetooth_info_state.dart';
 

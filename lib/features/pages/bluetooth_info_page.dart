@@ -6,7 +6,7 @@ import '../../core/di/service_locator.dart';
 import '../bluetooth_info/bloc/bluetooth_info_bloc.dart';
 import '../bluetooth_info/bloc/bluetooth_info_event.dart';
 import '../bluetooth_info/bloc/bluetooth_info_state.dart';
-import '../shared/widgets.dart';
+import '../shared/reusable_widgets.dart';
 
 class BluetoothInfoPage extends StatelessWidget {
   const BluetoothInfoPage({super.key});
@@ -24,196 +24,247 @@ class BluetoothInfoPage extends StatelessWidget {
 class _BluetoothInfoView extends StatelessWidget {
   const _BluetoothInfoView();
 
-  String field(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value == null) return "Unknown";
-    return value.toString();
-  }
-
-  String capability(Map<String, dynamic> data, String key) {
-    final value = data[key];
-
-    if (value == null) return "Unknown";
-
-    if (value is bool) {
-      return value ? "Supported" : "Not Supported";
-    }
-
-    return value.toString();
-  }
-
-  String bluetoothState(Map<String, dynamic> data) {
-    final enabled = data["enabled"];
-
-    if (enabled == true) {
-      return "Enabled";
-    }
-
-    return "Disabled";
-  }
-
-  IconData capabilityIcon(bool value) {
-    return value ? Icons.check_circle : Icons.cancel;
+  bool _isSupported(Map<String, dynamic> data, String key) {
+    return data[key] == true;
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bluetooth Information'),
+        title: const Text('Bluetooth Hardware'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.devices_other_rounded),
-            tooltip: 'Paired devices',
-            onPressed: () => context.push('/bluetooth/paired-devices'),
+          IconButton.filledTonal(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => context.read<BluetoothInfoBloc>().add(
+              const BluetoothInfoRequested(),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.bluetooth_searching_rounded),
-            tooltip: ' BT discovery',
-            onPressed: () => context.push('/bluetooth/bt-discovery'),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocBuilder<BluetoothInfoBloc, BluetoothInfoState>(
         builder: (context, state) {
-          if (state is BluetoothInfoLoading || state is BluetoothInfoInitial) {
+          if (state is BluetoothInfoInitial || state is BluetoothInfoLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (state is BluetoothInfoError) {
-            final theme = Theme.of(context);
-
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.bluetooth_disabled_rounded,
-                      size: 42,
-                      color: theme.colorScheme.error,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.bluetooth_disabled_rounded,
+                    size: 56,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text("Error Loading Data", style: theme.textTheme.titleLarge),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(state.message, textAlign: TextAlign.center),
+                  ),
+                  FilledButton(
+                    onPressed: () => context.read<BluetoothInfoBloc>().add(
+                      const BluetoothInfoRequested(),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Couldn't load Bluetooth information",
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () {
-                        context.read<BluetoothInfoBloc>().add(
-                          const BluetoothInfoRequested(),
-                        );
-                      },
-                      child: const Text("Retry"),
-                    ),
-                  ],
-                ),
+                    child: const Text("Retry"),
+                  ),
+                ],
               ),
             );
           }
 
-          final data = (state as BluetoothInfoLoaded).data;
+          final data = (state as BluetoothInfoLoaded).data; //[cite: 15]
 
           return RefreshIndicator(
             onRefresh: () async {
               context.read<BluetoothInfoBloc>().add(
                 const BluetoothInfoRequested(),
               );
-
-              await context.read<BluetoothInfoBloc>().stream.firstWhere(
-                (state) => state is! BluetoothInfoLoading,
-              );
             },
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               children: [
-                SectionCard(
-                  title: "Bluetooth Adapter",
-                  icon: Icons.bluetooth,
+                // Navigation Hero Banners
+                Row(
                   children: [
-                    ExpandableInfoTile(
-                      title: "Bluetooth",
-
-                      value: capability(data, "supported"),
+                    Expanded(
+                      child: _HeroNavigationCard(
+                        title: 'Scanner',
+                        icon: Icons.radar_rounded,
+                        color: theme.colorScheme.primary,
+                        onTap: () => context.push(
+                          '/bluetooth/bt-discovery',
+                        ), //[cite: 15]
+                      ),
                     ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "State",
-                      value: bluetoothState(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Adapter Name",
-                      value: field(data, "adapterName"),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Adapter Address",
-                      value: field(data, "adapterAddress"),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HeroNavigationCard(
+                        title: 'Paired Devices',
+                        icon: Icons.devices_other_rounded,
+                        color: theme.colorScheme.tertiary,
+                        onTap: () => context.push(
+                          '/bluetooth/paired-devices',
+                        ), //[cite: 15]
+                      ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 24),
 
-                const SizedBox(height: 16),
-
-                SectionCard(
-                  title: "Bluetooth Low Energy",
-                  icon: Icons.settings_bluetooth,
+                ModernSectionCard(
+                  title: "Adapter Identity",
+                  icon: Icons.bluetooth_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: "BLE Support",
-                      value: capability(data, "bleSupported"),
+                    Row(
+                      children: [
+                        Icon(
+                          data["enabled"] == true
+                              ? Icons.power_rounded
+                              : Icons.power_off_rounded,
+                          color: data["enabled"] == true
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          data["enabled"] == true
+                              ? "Adapter Powered ON"
+                              : "Adapter Powered OFF", //[cite: 15]
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Multiple Advertisement",
-                      value: capability(data, "multipleAdvertisement"),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Offloaded Filtering",
-                      value: capability(data, "offloadedFiltering"),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Offloaded Scan Batching",
-                      value: capability(data, "offloadedBatching"),
+                    const Divider(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        ModernDetailTile(
+                          width: 160,
+                          label: "Adapter Name",
+                          value: data["adapterName"] ?? "Unknown", //[cite: 15]
+                          icon: Icons.badge_rounded,
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "MAC Address",
+                          value:
+                              data["adapterAddress"] ?? "Unknown", //[cite: 15]
+                          icon: Icons.fingerprint_rounded,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
 
-                SectionCard(
-                  title: "Advanced Hardware",
-                  icon: Icons.memory_outlined,
+                ModernSectionCard(
+                  title: "Low Energy (BLE) Features",
+                  icon: Icons.battery_charging_full_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: "LE 2M PHY",
-                      value: capability(data, "le2MPhy"),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        ModernDetailTile(
+                          width: 160,
+                          label: "BLE Support",
+                          value: _isSupported(data, "bleSupported")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.bluetooth_connected_rounded,
+                          isSupported: _isSupported(data, "bleSupported"),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "Multiple Advertisements",
+                          value: _isSupported(data, "multipleAdvertisement")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.campaign_rounded,
+                          isSupported: _isSupported(
+                            data,
+                            "multipleAdvertisement",
+                          ),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "Offloaded Filtering",
+                          value: _isSupported(data, "offloadedFiltering")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.filter_alt_rounded,
+                          isSupported: _isSupported(data, "offloadedFiltering"),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "Scan Batching",
+                          value: _isSupported(data, "offloadedBatching")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.dynamic_feed_rounded,
+                          isSupported: _isSupported(data, "offloadedBatching"),
+                        ),
+                      ],
                     ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "LE Coded PHY",
-                      value: capability(data, "leCodedPhy"),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "Extended Advertising",
-                      value: capability(data, "extendedAdvertising"),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: "LE Audio",
-                      value: capability(data, "leAudio"),
-                      description:
-                          "Bluetooth LE Audio is part of the Bluetooth 5.2 specification. "
-                          "It provides better sound quality while consuming less power and "
-                          "enables features such as Auracast and Multi-Stream Audio.",
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                ModernSectionCard(
+                  title: "Advanced PHY & Audio",
+                  icon: Icons.memory_rounded,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        ModernDetailTile(
+                          width: 160,
+                          label: "LE 2M PHY",
+                          value: _isSupported(data, "le2MPhy")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.speed_rounded,
+                          isSupported: _isSupported(data, "le2MPhy"),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "LE Coded PHY",
+                          value: _isSupported(data, "leCodedPhy")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.route_rounded,
+                          isSupported: _isSupported(data, "leCodedPhy"),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "Extended Advertising",
+                          value: _isSupported(data, "extendedAdvertising")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.settings_input_antenna_rounded,
+                          isSupported: _isSupported(
+                            data,
+                            "extendedAdvertising",
+                          ),
+                        ),
+                        ModernDetailTile(
+                          width: 160,
+                          label: "LE Audio",
+                          value: _isSupported(data, "leAudio")
+                              ? "Supported"
+                              : "Unsupported", //[cite: 15]
+                          icon: Icons.headphones_rounded,
+                          isSupported: _isSupported(data, "leAudio"),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -221,6 +272,54 @@ class _BluetoothInfoView extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _HeroNavigationCard extends StatelessWidget {
+  const _HeroNavigationCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

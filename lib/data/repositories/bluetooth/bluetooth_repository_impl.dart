@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import '../../core/platform/native_channel.dart';
-import '../../features/bluetooth_info/models/bluetooth_device_model.dart';
-import '../../features/bluetooth_info/models/bluetooth_discovery_snapshot.dart';
+import '../../../core/platform/native_channel.dart';
+import '../../../features/bluetooth_info/models/bluetooth_device_model.dart';
+import '../../../features/bluetooth_info/models/bluetooth_discovery_snapshot.dart';
 import 'bluetooth_repository.dart';
 
 /// Translates raw native Bluetooth events into a stream of immutable

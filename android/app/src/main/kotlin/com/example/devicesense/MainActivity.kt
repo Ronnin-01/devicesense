@@ -2,6 +2,7 @@ package com.example.devicesense
 
 import com.example.devicesense.platform.BluetoothDiscoveryHandler
 import com.example.devicesense.platform.NativeBridge
+import com.example.devicesense.platform.NfcReaderHandler
 import com.example.devicesense.platform.WifiScanHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,6 +14,7 @@ class MainActivity : FlutterActivity() {
         private lateinit var nativeBridge: NativeBridge
         private lateinit var bluetoothDiscoveryHandler: BluetoothDiscoveryHandler
         private lateinit var wifiScanHandler: WifiScanHandler
+        private lateinit var nfcReaderHandler: NfcReaderHandler
 
         override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
                 super.configureFlutterEngine(flutterEngine)
@@ -51,6 +53,18 @@ class MainActivity : FlutterActivity() {
                                 DISCOVERY_CHANNEL,
                         )
                         .setStreamHandler(bluetoothDiscoveryHandler)
+
+                // ---- NFC reader (EventChannel + control MethodChannel) -----------
+                nfcReaderHandler = NfcReaderHandler(this)
+                MethodChannel(
+                                flutterEngine.dartExecutor.binaryMessenger,
+                                NFC_READER_CONTROL_CHANNEL
+                        )
+                        .setMethodCallHandler { call, result ->
+                                nfcReaderHandler.handleControlCall(call, result)
+                        }
+                EventChannel(flutterEngine.dartExecutor.binaryMessenger, NFC_READER_CHANNEL)
+                        .setStreamHandler(nfcReaderHandler)
 
                 // ---- Wi-Fi scan (EventChannel + control MethodChannel) -----------
                 // Mirrors the Bluetooth discovery pattern exactly so the Dart side
@@ -98,5 +112,9 @@ class MainActivity : FlutterActivity() {
                 // New Wi-Fi channels — same naming convention.
                 private const val WIFI_SCAN_CHANNEL = "device_sense/wifi_scan"
                 private const val WIFI_SCAN_CONTROL_CHANNEL = "device_sense/wifi_scan_control"
+
+                // New NFC channels — same naming convention.
+                private const val NFC_READER_CHANNEL = "device_sense/nfc_reader"
+                private const val NFC_READER_CONTROL_CHANNEL = "device_sense/nfc_reader_control"
         }
 }

@@ -9,15 +9,14 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Reads static Wi-Fi adapter capabilities from [WifiManager].
  *
- * No runtime permission required — all fields here are available
- * without any manifest or runtime permission declaration.
+ * No runtime permission required — all fields here are available without any manifest or runtime
+ * permission declaration.
  *
- * Single Responsibility: this handler only reads adapter hardware
- * capabilities. It never reads connected-network details (that's
- * [WifiInfoHandler]) and never scans (that's [WifiScanHandler]).
+ * Single Responsibility: this handler only reads adapter hardware capabilities. It never reads
+ * connected-network details (that's [WifiInfoHandler]) and never scans (that's [WifiScanHandler]).
  */
 class WifiCapabilitiesHandler(
-    private val context: Context,
+        private val context: Context,
 ) : MethodHandler {
 
     override val method: String = "getWifiCapabilities"
@@ -28,7 +27,7 @@ class WifiCapabilitiesHandler(
 
     private fun collectCapabilities(): Map<String, Any> {
         val wifiManager =
-            context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
         return buildMap {
             put("wifiSupported", true) // If WifiManager is non-null, WiFi is supported.
@@ -38,9 +37,7 @@ class WifiCapabilitiesHandler(
             // per 2 minutes in the foreground. This flag tells you whether
             // scanning is allowed even when WiFi is disabled (the OS can
             // keep scanning for location even without active WiFi).
-            @Suppress("DEPRECATION")
-            val scanAlwaysAvailable = wifiManager.isScanAlwaysAvailable
-            put("scanAlwaysAvailable", scanAlwaysAvailable)
+            put("scanAlwaysAvailable", wifiManager.isScanAlwaysAvailable)
 
             // 5 GHz band — supported on most modern phones.
             put("is5GHzSupported", wifiManager.is5GHzBandSupported)
@@ -76,12 +73,13 @@ class WifiCapabilitiesHandler(
         }
     }
 
-    private fun wifiStateLabel(state: Int): String = when (state) {
-        WifiManager.WIFI_STATE_ENABLED -> "ENABLED"
-        WifiManager.WIFI_STATE_ENABLING -> "ENABLING"
-        WifiManager.WIFI_STATE_DISABLED -> "DISABLED"
-        WifiManager.WIFI_STATE_DISABLING -> "DISABLING"
-        WifiManager.WIFI_STATE_UNKNOWN -> "UNKNOWN"
-        else -> "UNKNOWN"
-    }
+    private fun wifiStateLabel(state: Int): String =
+            when (state) {
+                WifiManager.WIFI_STATE_ENABLED -> "ENABLED"
+                WifiManager.WIFI_STATE_ENABLING -> "ENABLING"
+                WifiManager.WIFI_STATE_DISABLED -> "DISABLED"
+                WifiManager.WIFI_STATE_DISABLING -> "DISABLING"
+                WifiManager.WIFI_STATE_UNKNOWN -> "UNKNOWN"
+                else -> "UNKNOWN"
+            }
 }

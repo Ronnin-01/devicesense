@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/repositories/hardware_repository.dart';
+import '../../../data/repositories/hardware/hardware_repository.dart';
 
 part 'battery_info_event.dart';
 part 'battery_info_state.dart';

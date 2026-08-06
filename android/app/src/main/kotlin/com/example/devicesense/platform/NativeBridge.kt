@@ -21,6 +21,7 @@ class NativeBridge(
                     ConnectedDevicesHandler(context),
                     WifiCapabilitiesHandler(context), // adapter capabilities, no permission needed
                     WifiInfoHandler(context), // connected network details, needs FINE_LOCATION
+                    NfcCapabilitiesHandler(context),
                     PermissionHandler(activity),
             )
 

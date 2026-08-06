@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/permissions/permission_type.dart';
 
-/// Immutable metadata describing a runtime permission.
-///
-/// This class contains presentation information only.
-/// It does NOT contain permission state.
-@immutable
 class PermissionMetadata {
   const PermissionMetadata({
     required this.type,
@@ -16,65 +11,63 @@ class PermissionMetadata {
   });
 
   final PermissionType type;
-
   final String title;
-
   final String description;
-
   final IconData icon;
 }
 
-/// Central catalogue of every runtime permission supported
-/// by Device Sense.
-///
-/// Every screen in the application should use this list instead
-/// of hardcoded titles or icons.
-abstract final class PermissionCatalog {
-  static const permissions = <PermissionMetadata>[
+class PermissionCatalog {
+  PermissionCatalog._();
+
+  static const List<PermissionMetadata> permissions = [
+    PermissionMetadata(
+      type: PermissionType.location,
+      title: 'Location Services',
+      description:
+          'Required to scan for nearby Wi-Fi access points and get actual SSID/BSSID names.',
+      icon: Icons.location_on_rounded,
+    ),
+    PermissionMetadata(
+      type: PermissionType.nearbyWifiDevices,
+      title: 'Nearby Wi-Fi Devices',
+      description:
+          'Required on Android 13+ to interact with local Wi-Fi networks without full location tracking.',
+      icon: Icons.wifi_find_rounded,
+    ),
     PermissionMetadata(
       type: PermissionType.bluetoothConnect,
       title: 'Bluetooth Connect',
       description:
-          'Allows Device Sense to communicate with paired Bluetooth devices.',
-      icon: Icons.bluetooth_connected,
+          'Allows the app to connect to paired Bluetooth devices and read hardware states.',
+      icon: Icons.bluetooth_connected_rounded,
     ),
-
     PermissionMetadata(
       type: PermissionType.bluetoothScan,
       title: 'Bluetooth Scan',
-      description: 'Allows Device Sense to discover nearby Bluetooth devices.',
-      icon: Icons.bluetooth_searching,
+      description:
+          'Required to discover new, unpaired Bluetooth Classic and BLE devices in the area.',
+      icon: Icons.bluetooth_searching_rounded,
     ),
-
+    PermissionMetadata(
+      type: PermissionType.sensors,
+      title: 'Body & Hardware Sensors',
+      description:
+          'Grants access to the accelerometer, gyroscope, and step counters.',
+      icon: Icons.sensors_rounded,
+    ),
     PermissionMetadata(
       type: PermissionType.camera,
-      title: 'Camera',
-      description: 'Required for barcode and QR code scanning features.',
-      icon: Icons.photo_camera_outlined,
-    ),
-
-    PermissionMetadata(
-      type: PermissionType.microphone,
-      title: 'Microphone',
+      title: 'Camera Access',
       description:
-          'Allows recording audio when future voice features are added.',
-      icon: Icons.mic_none_outlined,
+          'Required for optical hardware analysis and barcode/QR scanning.',
+      icon: Icons.camera_alt_rounded,
     ),
-
-    PermissionMetadata(
-      type: PermissionType.location,
-      title: 'Location',
-      description:
-          'Required on some Android versions for nearby device discovery.',
-      icon: Icons.location_on_outlined,
-    ),
-
     PermissionMetadata(
       type: PermissionType.notification,
-      title: 'Notifications',
+      title: 'System Notifications',
       description:
-          'Allows Device Sense to send important alerts and background updates.',
-      icon: Icons.notifications_outlined,
+          'Allows background workers (like battery sampling) to post status updates.',
+      icon: Icons.notifications_rounded,
     ),
   ];
 }

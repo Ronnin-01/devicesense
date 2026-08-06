@@ -5,7 +5,7 @@ import '../../core/di/service_locator.dart';
 import '../device_info/bloc/device_info_bloc.dart';
 import '../device_info/bloc/device_info_event.dart';
 import '../device_info/bloc/device_info_state.dart';
-import '../shared/widgets.dart';
+import '../shared/reusable_widgets.dart';
 
 class DeviceInfoPage extends StatelessWidget {
   const DeviceInfoPage({super.key});
@@ -22,6 +22,9 @@ class DeviceInfoPage extends StatelessWidget {
 class _DeviceInfoView extends StatelessWidget {
   const _DeviceInfoView();
 
+  // ===========================================================================
+  // Data Parsing (Preserved exactly as requested)
+  // ===========================================================================
   String _buildTime(Map<String, dynamic> info) {
     final raw = info['time'];
     if (raw == null) return 'Unknown';
@@ -33,46 +36,68 @@ class _DeviceInfoView extends StatelessWidget {
         '${pad(date.hour)}:${pad(date.minute)}';
   }
 
+  // ===========================================================================
+  // UI Build Method
+  // ===========================================================================
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Device Information')),
+      appBar: AppBar(
+        title: const Text('Device Information'),
+        actions: [
+          IconButton.filledTonal(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Info',
+            onPressed: () =>
+                context.read<DeviceInfoBloc>().add(const DeviceInfoRequested()),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: BlocBuilder<DeviceInfoBloc, DeviceInfoState>(
         builder: (context, state) {
           if (state is DeviceInfoLoading || state is DeviceInfoInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Reading system properties...'),
+                ],
+              ),
+            );
           }
 
           if (state is DeviceInfoError) {
-            final theme = Theme.of(context);
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: ModernSectionCard(
+                  title: "Error Reading Data",
+                  icon: Icons.error_outline_rounded,
+                  backgroundColor: theme.colorScheme.errorContainer,
                   children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 40,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Couldn't load device info",
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
                     Text(
                       state.message,
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.read<DeviceInfoBloc>().add(
-                        const DeviceInfoRequested(),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => context.read<DeviceInfoBloc>().add(
+                          const DeviceInfoRequested(),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
                       ),
-                      child: const Text('Retry'),
                     ),
                   ],
                 ),
@@ -81,7 +106,14 @@ class _DeviceInfoView extends StatelessWidget {
           }
 
           final data = (state as DeviceInfoLoaded).data;
-          String field(String key) => (data[key] ?? '').toString();
+
+          // Helper to extract fields safely
+          String field(String key) {
+            final val = data[key];
+            return (val == null || val.toString().isEmpty)
+                ? 'Unknown'
+                : val.toString();
+          }
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -91,141 +123,337 @@ class _DeviceInfoView extends StatelessWidget {
               );
             },
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               children: [
-                SectionCard(
-                  title: 'Identity',
-                  icon: Icons.badge_outlined,
-                  children: [
-                    ExpandableInfoTile(
-                      title: 'Manufacturer',
-                      value: field('manufacturer'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Brand', value: field('brand')),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Model', value: field('model')),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Device', value: field('device')),
-                  ],
+                // 1. Hero Identity Banner
+                _buildHeroBanner(
+                  context,
+                  brand: field('brand'),
+                  model: field('model'),
+                  osVersion: field('androidVersion'),
+                  sdk: field('sdk'),
                 ),
-                const SizedBox(height: 16),
-                SectionCard(
-                  title: 'Software',
-                  icon: Icons.developer_mode_outlined,
+                const SizedBox(height: 24),
+
+                // 2. Identity Grid
+                ModernSectionCard(
+                  title: 'Core Identity',
+                  icon: Icons.badge_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: 'Android Version',
-                      value: field('androidVersion'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'SDK Level', value: field('sdk')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Security Patch',
-                      value: field('securityPatch'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Build Time',
-                      value: _buildTime(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Bootloader',
-                      value: field('bootloader'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Host', value: field('host')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Fingerprint',
-                      value: field('fingerprint'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Tags', value: field('tags')),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'ABI', value: field('abi')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Build Type',
-                      value: field('buildType'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Codename',
-                      value: field('codename'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Incremental',
-                      value: field('incremental'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Release',
-                      value: field('release'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Base OS',
-                      value: field('baseOS'),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final halfWidth = (constraints.maxWidth - 12) / 2;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Manufacturer',
+                              value: field('manufacturer'),
+                              icon: Icons.factory_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Brand',
+                              value: field('brand'),
+                              icon: Icons.branding_watermark_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Model',
+                              value: field('model'),
+                              icon: Icons.smartphone_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Device Name',
+                              value: field('device'),
+                              icon: Icons.devices_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                SectionCard(
-                  title: 'Hardware',
-                  icon: Icons.memory_outlined,
+
+                // 3. Hardware Grid
+                ModernSectionCard(
+                  title: 'Hardware & Architecture',
+                  icon: Icons.memory_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: 'Hardware',
-                      value: field('hardware'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Board', value: field('board')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Product',
-                      value: field('product'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Supported ABI',
-                      value: field('abi'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'SoC Manufacturer',
-                      value: field('socman'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'SoC Model',
-                      value: field('socmodel'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'ODM SKU',
-                      value: field('odmsku'),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final halfWidth = (constraints.maxWidth - 12) / 2;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Hardware',
+                              value: field('hardware'),
+                              icon: Icons.developer_board_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Board',
+                              value: field('board'),
+                              icon: Icons.dashboard_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Product',
+                              value: field('product'),
+                              icon: Icons.inventory_2_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Supported ABI',
+                              value: field('abi'),
+                              icon: Icons.settings_ethernet_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'SoC Manufacturer',
+                              value: field('socman'),
+                              icon: Icons.precision_manufacturing_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'SoC Model',
+                              value: field('socmodel'),
+                              icon: Icons.memory_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'ODM SKU',
+                              value: field('odmsku'),
+                              icon: Icons.qr_code_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Display Panel',
+                              value: field('display'),
+                              icon: Icons.screenshot_monitor_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                SectionCard(
-                  title: 'Display',
-                  icon: Icons.smartphone_outlined,
+
+                // 4. Software & OS Grid
+                ModernSectionCard(
+                  title: 'Operating System',
+                  icon: Icons.android_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: 'Display',
-                      value: field('display'),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final halfWidth = (constraints.maxWidth - 12) / 2;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Android Version',
+                              value: field('androidVersion'),
+                              icon: Icons.system_update_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'SDK Level',
+                              value: 'API ${field('sdk')}',
+                              icon: Icons.code_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Security Patch',
+                              value: field('securityPatch'),
+                              icon: Icons.security_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Codename',
+                              value: field('codename'),
+                              icon: Icons.bug_report_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Release',
+                              value: field('release'),
+                              icon: Icons.new_releases_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Base OS',
+                              value: field('baseOS'),
+                              icon: Icons.terminal_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Build Type',
+                              value: field('buildType'),
+                              icon: Icons.build_circle_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Incremental',
+                              value: field('incremental'),
+                              icon: Icons.merge_type_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+
+                // 5. Advanced System Build
+                ModernSectionCard(
+                  title: 'System Build Details',
+                  icon: Icons.settings_system_daydream_rounded,
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final halfWidth = (constraints.maxWidth - 12) / 2;
+                        final fullWidth = constraints
+                            .maxWidth; // For long strings like fingerprint
+
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Build Time',
+                              value: _buildTime(data),
+                              icon: Icons.access_time_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Bootloader',
+                              value: field('bootloader'),
+                              icon: Icons.system_security_update_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Host',
+                              value: field('host'),
+                              icon: Icons.dns_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: halfWidth,
+                              label: 'Tags',
+                              value: field('tags'),
+                              icon: Icons.local_offer_rounded,
+                            ),
+                            // Fingerprint is typically a very long string, so it gets full width
+                            ModernDetailTile(
+                              width: fullWidth,
+                              label: 'System Fingerprint',
+                              value: field('fingerprint'),
+                              icon: Icons.fingerprint_rounded,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // Custom Visual Hero Card
+  // ===========================================================================
+  Widget _buildHeroBanner(
+    BuildContext context, {
+    required String brand,
+    required String model,
+    required String osVersion,
+    required String sdk,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Capitalize brand name for aesthetic purposes
+    final displayBrand = brand.isNotEmpty
+        ? '${brand[0].toUpperCase()}${brand.substring(1)}'
+        : 'Unknown';
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colorScheme.primary, colorScheme.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.smartphone_rounded,
+              size: 48,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$displayBrand $model',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    StatusBadgeTag(
+                      label: 'Android $osVersion',
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    StatusBadgeTag(label: 'API $sdk', color: Colors.white),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

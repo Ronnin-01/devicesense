@@ -1,5 +1,5 @@
-import '../../core/permissions/permission_result.dart';
-import '../../core/permissions/permission_type.dart';
+import '../../../core/permissions/permission_result.dart';
+import '../../../core/permissions/permission_type.dart';
 
 abstract interface class HardwareRepository {
   Future<Map<String, dynamic>> getDeviceInfo();

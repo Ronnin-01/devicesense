@@ -4,146 +4,262 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.net.Inet4Address
-import java.net.NetworkInterface
 
-/**
- * Reads the currently connected Wi-Fi network's details.
- *
- * Permission required: ACCESS_FINE_LOCATION (for SSID/BSSID — Android redacts them to "<unknown
- * ssid>" / "02:00:00:00:00:00" without it).
- *
- * API fragmentation handled transparently:
- * - API <= 30: [WifiManager.getConnectionInfo] (deprecated but functional)
- * - API >= 31: [ConnectivityManager] + [NetworkCapabilities.getTransportInfo]
- *
- * Both paths produce the same output map so Dart never needs to know which code path ran.
- *
- * Privacy note: SSID and BSSID are returned as-is when the permission is granted. Without the
- * permission the OS redacts them — this handler passes the redacted values through unchanged rather
- * than pretending the fields don't exist, so the UI can show "Permission required" for those
- * specific fields while still showing RSSI/speed/frequency which the OS does NOT redact.
- */
 class WifiInfoHandler(
-        private val context: Context,
+        context: Context,
 ) : MethodHandler {
+
+    private val context: Context = context.applicationContext
+
+    private val wifiManager: WifiManager? =
+            this.context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+
+    private val connectivityManager: ConnectivityManager? =
+            this.context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
     override val method: String = "getWifiInfo"
 
-    override fun handle(call: MethodCall, result: MethodChannel.Result) {
-        val wifiManager =
-                context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    override fun handle(
+            call: MethodCall,
+            result: MethodChannel.Result,
+    ) {
+        try {
+            val manager = wifiManager
 
-        if (!wifiManager.isWifiEnabled) {
+            if (manager == null) {
+                result.error(
+                        "WIFI_UNSUPPORTED",
+                        "Wi-Fi service is unavailable on this device.",
+                        null,
+                )
+                return
+            }
+
+            if (!manager.isWifiEnabled) {
+                result.success(
+                        disconnectedMap(
+                                wifiEnabled = false,
+                                reason = "WIFI_DISABLED",
+                        )
+                )
+                return
+            }
+
+            val connection = getCurrentWifiConnection()
+
+            if (connection == null) {
+                result.success(
+                        disconnectedMap(
+                                wifiEnabled = true,
+                                reason = "NOT_CONNECTED",
+                        )
+                )
+                return
+            }
+
+            val hasFineLocationPermission = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+
+            val hasNearbyWifiPermission =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        hasPermission(Manifest.permission.NEARBY_WIFI_DEVICES)
+                    } else {
+                        true
+                    }
+
             result.success(
-                    mapOf(
-                            "connected" to false,
-                            "wifiEnabled" to false,
-                            "reason" to "WIFI_DISABLED",
+                    buildWifiInfoMap(
+                            info = connection.wifiInfo,
+                            network = connection.network,
+                            linkProperties = connection.linkProperties,
+                            hasFineLocationPermission = hasFineLocationPermission,
+                            hasNearbyWifiPermission = hasNearbyWifiPermission,
                     )
             )
-            return
-        }
-
-        val wifiInfo: WifiInfo? =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // API 31+: getConnectionInfo() is deprecated. Use
-                    // ConnectivityManager → NetworkCapabilities → WifiInfo.
-                    getWifiInfoModern()
-                } else {
-                    // API <= 30: legacy path, still fully functional.
-                    @Suppress("DEPRECATION") wifiManager.connectionInfo
-                }
-
-        if (wifiInfo == null || wifiInfo.networkId == -1) {
-            // networkId == -1 means not connected to any network.
-            result.success(
-                    mapOf(
-                            "connected" to false,
-                            "wifiEnabled" to true,
-                            "reason" to "NOT_CONNECTED",
-                    )
+        } catch (error: SecurityException) {
+            result.error(
+                    "PERMISSION_DENIED",
+                    error.message ?: "Required Wi-Fi permission was denied.",
+                    null,
             )
-            return
+        } catch (error: Exception) {
+            result.error(
+                    "WIFI_INFO_ERROR",
+                    error.message ?: "Unable to read Wi-Fi information.",
+                    null,
+            )
         }
-
-        val hasLocationPermission =
-                ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                ) == PackageManager.PERMISSION_GRANTED
-
-        result.success(buildWifiInfoMap(wifiInfo, hasLocationPermission))
     }
 
-    private fun getWifiInfoModern(): WifiInfo? {
-        val connectivityManager =
-                context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    /**
+     * Returns the currently active Wi-Fi connection.
+     *
+     * Do not use WifiInfo.networkId to decide whether the device is connected. Android can redact
+     * networkId to -1 when location-sensitive information is unavailable.
+     */
+    private fun getCurrentWifiConnection(): WifiConnection? {
+        val manager = connectivityManager ?: return null
 
-        val activeNetwork = connectivityManager.activeNetwork ?: return null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return getModernWifiConnection(manager)
+        }
 
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return null
+        return getLegacyWifiConnection(manager)
+    }
 
-        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
+    /** Android 12/API 31 and newer. */
+    private fun getModernWifiConnection(
+            manager: ConnectivityManager,
+    ): WifiConnection? {
+        val activeNetwork = manager.activeNetwork ?: return null
 
-        return capabilities.transportInfo as? WifiInfo
+        val capabilities = manager.getNetworkCapabilities(activeNetwork) ?: return null
+
+        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return null
+        }
+
+        val wifiInfo = capabilities.transportInfo as? WifiInfo ?: return null
+
+        return WifiConnection(
+                network = activeNetwork,
+                wifiInfo = wifiInfo,
+                linkProperties = manager.getLinkProperties(activeNetwork),
+        )
+    }
+
+    /** Android 11/API 30 and older. */
+    @Suppress("DEPRECATION")
+    private fun getLegacyWifiConnection(
+            manager: ConnectivityManager,
+    ): WifiConnection? {
+        val activeNetwork = manager.activeNetwork ?: return null
+
+        val capabilities = manager.getNetworkCapabilities(activeNetwork) ?: return null
+
+        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return null
+        }
+
+        val info = wifiManager?.connectionInfo ?: return null
+
+        return WifiConnection(
+                network = activeNetwork,
+                wifiInfo = info,
+                linkProperties = manager.getLinkProperties(activeNetwork),
+        )
     }
 
     private fun buildWifiInfoMap(
             info: WifiInfo,
-            hasLocationPermission: Boolean,
+            network: Network,
+            linkProperties: LinkProperties?,
+            hasFineLocationPermission: Boolean,
+            hasNearbyWifiPermission: Boolean,
     ): Map<String, Any> {
-        return buildMap {
-            put("connected", true)
-            put("wifiEnabled", true)
-            put("hasLocationPermission", hasLocationPermission)
+        val rawSsid = normalizeSsid(info.ssid)
+        val rawBssid = info.bssid.orEmpty()
+        Log.d("WifiInfoHandler", "SSID: $rawSsid, BSSID: $rawBssid")
 
-            // SSID — redacted to "<unknown ssid>" by OS without location.
-            val rawSsid = info.ssid?.removePrefix("\"")?.removeSuffix("\"") ?: ""
-            put("ssid", if (hasLocationPermission) rawSsid else "Permission required")
+        val ssidAccessible =
+                hasFineLocationPermission &&
+                        rawSsid.isNotBlank() &&
+                        rawSsid != WifiManager.UNKNOWN_SSID
 
-            // BSSID — redacted to "02:00:00:00:00:00" by OS without location.
-            put(
-                    "bssid",
-                    if (hasLocationPermission) (info.bssid ?: "Unknown") else "Permission required",
-            )
+        val bssidAccessible =
+                hasFineLocationPermission &&
+                        rawBssid.isNotBlank() &&
+                        rawBssid != REDACTED_MAC_ADDRESS
 
-            // RSSI and signal strength — NOT redacted, always available.
-            put("rssi", info.rssi)
-            put("signalStrength", rssiLabel(info.rssi))
-            put(
-                    "signalLevel",
-                    WifiManager.calculateSignalLevel(info.rssi, 5), // 0–4 bar scale
-            )
+        return mapOf(
+                "connected" to true,
+                "wifiEnabled" to true,
+                "hasLocationPermission" to hasFineLocationPermission,
+                "hasNearbyWifiPermission" to hasNearbyWifiPermission,
+                "ssid" to
+                        if (ssidAccessible) {
+                            rawSsid
+                        } else {
+                            "Permission required"
+                        },
+                "bssid" to
+                        if (bssidAccessible) {
+                            rawBssid
+                        } else {
+                            "Permission required"
+                        },
+                "rssi" to info.rssi,
+                "signalStrength" to rssiLabel(info.rssi),
+                "signalLevel" to calculateSignalLevel(info.rssi),
+                "linkSpeedMbps" to info.linkSpeed,
+                "frequencyMHz" to info.frequency,
+                "band" to frequencyBandLabel(info.frequency),
 
-            // Link speed in Mbps.
-            put("linkSpeedMbps", info.linkSpeed)
+                // LinkProperties belongs to the actual active Wi-Fi network.
+                // This avoids accidentally returning an address from cellular,
+                // VPN, or another interface.
+                "ipAddress" to (getIpv4Address(linkProperties) ?: "Unknown"),
 
-            // Frequency in MHz — tells you which band you're on.
-            put("frequencyMHz", info.frequency)
-            put("band", frequencyBandLabel(info.frequency))
+                // This can legitimately be -1 when Android redacts it.
+                // It must not be used as the connection test.
+                "networkId" to info.networkId,
+                "hiddenSsid" to info.hiddenSSID,
+                "macAddress" to (info.macAddress ?: REDACTED_MAC_ADDRESS),
+                "networkHandle" to network.networkHandle.toString(),
+        )
+    }
 
-            // IP address — readable dotted-decimal from NetworkInterface,
-            // which is more reliable than WifiInfo.ipAddress on modern OS.
-            put("ipAddress", getLocalIpAddress() ?: "Unknown")
+    private fun disconnectedMap(
+            wifiEnabled: Boolean,
+            reason: String,
+    ): Map<String, Any> {
+        return mapOf(
+                "connected" to false,
+                "wifiEnabled" to wifiEnabled,
+                "hasLocationPermission" to hasPermission(Manifest.permission.ACCESS_FINE_LOCATION),
+                "hasNearbyWifiPermission" to
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            hasPermission(Manifest.permission.NEARBY_WIFI_DEVICES)
+                        } else {
+                            true
+                        },
+                "reason" to reason,
+        )
+    }
 
-            // Network ID — internal OS identifier, useful for debugging.
-            put("networkId", info.networkId)
+    private fun normalizeSsid(ssid: String?): String {
+        if (ssid.isNullOrBlank()) return ""
 
-            // Hidden network indicator (SSID not broadcast).
-            put("hiddenSsid", info.hiddenSSID)
+        return ssid.removePrefix("\"").removeSuffix("\"").trim()
+    }
 
-            // MAC address — redacted to "02:00:00:00:00:00" on API 23+
-            // for privacy. Still returned for transparency.
-            put("macAddress", info.macAddress ?: "Unavailable")
-        }
+    private fun getIpv4Address(
+            linkProperties: LinkProperties?,
+    ): String? {
+        return linkProperties?.linkAddresses
+                ?.firstOrNull { linkAddress ->
+                    val address = linkAddress.address
+
+                    address is Inet4Address &&
+                            !address.isLoopbackAddress &&
+                            !address.isLinkLocalAddress
+                }
+                ?.address
+                ?.hostAddress
+    }
+
+    private fun calculateSignalLevel(rssi: Int): Int {
+        return WifiManager.calculateSignalLevel(rssi, 5).coerceIn(0, 4)
     }
 
     private fun rssiLabel(rssi: Int): String =
@@ -155,30 +271,32 @@ class WifiInfoHandler(
                 else -> "Very Weak"
             }
 
-    private fun frequencyBandLabel(frequencyMHz: Int): String =
-            when {
-                frequencyMHz in 2400..2500 -> "2.4 GHz"
-                frequencyMHz in 5100..5900 -> "5 GHz"
-                frequencyMHz in 5925..7125 -> "6 GHz"
+    private fun frequencyBandLabel(
+            frequencyMHz: Int,
+    ): String =
+            when (frequencyMHz) {
+                in 2400..2500 -> "2.4 GHz"
+                in 4900..5900 -> "5 GHz"
+                in 5925..7125 -> "6 GHz"
                 else -> "Unknown"
             }
 
-    /**
-     * Reads the device's local IPv4 address from [NetworkInterface]. More reliable than
-     * [WifiInfo.ipAddress] which packs the address as a little-endian int and can return 0 on some
-     * OEM skins.
-     */
-    private fun getLocalIpAddress(): String? {
-        return try {
-            NetworkInterface.getNetworkInterfaces()
-                    ?.asSequence()
-                    ?.flatMap { iface -> iface.inetAddresses.asSequence() }
-                    ?.firstOrNull { address ->
-                        !address.isLoopbackAddress && address is Inet4Address
-                    }
-                    ?.hostAddress
-        } catch (e: Exception) {
-            null
-        }
+    private fun hasPermission(
+            permission: String,
+    ): Boolean {
+        return ContextCompat.checkSelfPermission(
+                context,
+                permission,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private data class WifiConnection(
+            val network: Network,
+            val wifiInfo: WifiInfo,
+            val linkProperties: LinkProperties?,
+    )
+
+    private companion object {
+        const val REDACTED_MAC_ADDRESS = "02:00:00:00:00:00"
     }
 }

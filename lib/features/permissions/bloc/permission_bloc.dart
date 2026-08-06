@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/repositories/hardware_repository.dart';
+import '../../../data/repositories/hardware/hardware_repository.dart';
 import 'permission_event.dart';
 import 'permission_state.dart';
 

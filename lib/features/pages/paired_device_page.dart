@@ -2,16 +2,14 @@ import 'package:devicesense/features/bluetooth_info/bloc/bluetooth_info_bloc.dar
 import 'package:devicesense/features/bluetooth_info/bloc/bluetooth_info_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logger/logger.dart';
 
 import '../../core/di/service_locator.dart';
 import '../../core/permissions/permission_type.dart';
 import '../bluetooth_info/bloc/bluetooth_info_event.dart';
+import '../bluetooth_info/models/bluetooth_device_model.dart';
 import '../permissions/bloc/permission_bloc.dart';
 import '../permissions/bloc/permission_event.dart';
-import '../shared/bluetooth_summary_card.dart';
-import '../shared/paired_device_card.dart';
-import '../shared/paired_device_detail_sheet.dart';
+import '../shared/reusable_widgets.dart';
 
 class PairedDevicesPage extends StatelessWidget {
   const PairedDevicesPage({super.key});
@@ -23,8 +21,8 @@ class PairedDevicesPage extends StatelessWidget {
         BlocProvider(
           create: (_) =>
               sl<BluetoothInfoBloc>()..add(const BluetoothPairedDevices()),
-        ),
-        BlocProvider(create: (_) => sl<PermissionBloc>()),
+        ), //[cite: 16]
+        BlocProvider(create: (_) => sl<PermissionBloc>()), //[cite: 16]
       ],
       child: const _PairedDevicesView(),
     );
@@ -36,8 +34,21 @@ class _PairedDevicesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Paired Bluetooth Devices")),
+      appBar: AppBar(
+        title: const Text("Paired Devices"),
+        actions: [
+          IconButton.filledTonal(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => context.read<BluetoothInfoBloc>().add(
+              const BluetoothPairedDevices(),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: BlocBuilder<BluetoothInfoBloc, BluetoothInfoState>(
         builder: (context, state) {
           if (state is BluetoothInfoInitial || state is BluetoothInfoLoading) {
@@ -45,87 +56,85 @@ class _PairedDevicesView extends StatelessWidget {
           }
 
           if (state is BluetoothInfoError) {
-            return _ErrorView(message: state.message);
+            return Center(child: Text(state.message));
           }
 
-          final data = (state as BTDevicesLoaded).data;
-          Logger().e(data);
-          final supported = data["supported"] == true;
-          final permissionRequired = data["permissionRequired"] == true;
-          final bluetoothEnabled = data["bluetoothEnabled"] != false;
+          final data = (state as BTDevicesLoaded).data; //[cite: 16]
+          final supported = data["supported"] == true; //[cite: 16]
+          final permissionRequired =
+              data["permissionRequired"] == true; //[cite: 16]
+          final bluetoothEnabled =
+              data["bluetoothEnabled"] != false; //[cite: 16]
 
-          final devices = (data["devices"] as List<dynamic>? ?? [])
-              .cast<Map<dynamic, dynamic>>()
-              .map(
-                (e) => e.map((key, value) => MapEntry(key.toString(), value)),
-              )
-              .toList();
+          final rawDevices = (data["devices"] as List<dynamic>? ?? [])
+              .cast<Map<dynamic, dynamic>>();
 
           if (!supported) {
-            return const _UnsupportedView();
+            return _WarningStateView(
+              icon: Icons.bluetooth_disabled_rounded,
+              title: "Unsupported",
+              message: "Bluetooth is not supported on this device.",
+            ); //[cite: 16]
           }
-
           if (permissionRequired) {
-            return _PermissionView(
-              onGrant: () {
-                context.read<PermissionBloc>().add(
-                  const PermissionRequested(PermissionType.bluetoothConnect),
-                );
-              },
+            return _PermissionRequestView(
+              onGrant: () => context.read<PermissionBloc>().add(
+                const PermissionRequested(PermissionType.bluetoothConnect),
+              ), //[cite: 16]
             );
           }
-
           if (!bluetoothEnabled) {
-            return const _BluetoothDisabledView();
+            return _WarningStateView(
+              icon: Icons.bluetooth_disabled_rounded,
+              title: "Bluetooth is Off",
+              message: "Please enable Bluetooth to view bonded devices.",
+            ); //[cite: 16]
           }
 
-          if (devices.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<BluetoothInfoBloc>().add(
-                  const BluetoothPairedDevices(),
-                );
-              },
-              child: ListView(
-                children: const [SizedBox(height: 120), _EmptyView()],
-              ),
-            );
+          if (rawDevices.isEmpty) {
+            return _WarningStateView(
+              icon: Icons.link_off_rounded,
+              title: "No Paired Devices",
+              message: "Pair a device from your Android Settings first.",
+            ); //[cite: 16]
           }
 
           return RefreshIndicator(
-            onRefresh: () async {
-              context.read<BluetoothInfoBloc>().add(
-                const BluetoothPairedDevices(),
-              );
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                BluetoothSummaryCard(
-                  bluetoothEnabled: bluetoothEnabled,
-                  permissionGranted: !permissionRequired,
-                  deviceCount: devices.length,
-                  lastUpdated: DateTime.now(),
-                ),
+            onRefresh: () async => context.read<BluetoothInfoBloc>().add(
+              const BluetoothPairedDevices(),
+            ),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: rawDevices.length + 1, // +1 for the header card
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(0, 0, 0, 16.0),
+                    child: ModernSectionCard(
+                      title: "Bonded Record",
+                      icon: Icons.memory_rounded,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      children: [
+                        Text(
+                          "Found ${rawDevices.length} previously paired devices saved in the adapter's memory.",
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                const SizedBox(height: 24),
-
-                Text(
-                  "Paired Devices",
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-
-                const SizedBox(height: 14),
-
-                ...devices.map(
-                  (device) => PairedDeviceCard(
-                    device: device,
-                    onTap: () {
-                      PairedDeviceDetailsSheet.show(context, device);
-                    },
-                  ),
-                ),
-              ],
+                // Convert Map to Model for our reusable card
+                final devMap = rawDevices[index - 1].map(
+                  (key, value) => MapEntry(key.toString(), value),
+                );
+                final model = BluetoothDeviceModel.fromJson(
+                  Map<String, dynamic>.from(devMap),
+                );
+                return BluetoothDeviceCard(device: model);
+              },
             ),
           );
         },
@@ -134,131 +143,64 @@ class _PairedDevicesView extends StatelessWidget {
   }
 }
 
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        children: [
-          const Icon(Icons.devices_other_rounded, size: 72),
-          const SizedBox(height: 18),
-          Text(
-            "No paired Bluetooth devices found.",
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Pair a Bluetooth device from Android Settings and refresh this page.",
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PermissionView extends StatelessWidget {
-  const _PermissionView({required this.onGrant});
-
-  final VoidCallback onGrant;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.lock_outline, size: 70),
-            const SizedBox(height: 18),
-            Text(
-              "Bluetooth permission is required to view paired devices.",
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onGrant,
-              icon: const Icon(Icons.bluetooth),
-              label: const Text("Grant Permission"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BluetoothDisabledView extends StatelessWidget {
-  const _BluetoothDisabledView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bluetooth_disabled, size: 70),
-            SizedBox(height: 18),
-            Text(
-              "Bluetooth is currently turned off.",
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UnsupportedView extends StatelessWidget {
-  const _UnsupportedView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bluetooth_disabled, size: 64),
-            SizedBox(height: 16),
-            Text(
-              "Bluetooth is not supported on this device.",
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message});
-
+class _WarningStateView extends StatelessWidget {
+  const _WarningStateView({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+  final IconData icon;
+  final String title;
   final String message;
 
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 72, color: theme.colorScheme.outline),
+            const SizedBox(height: 16),
+            Text(title, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PermissionRequestView extends StatelessWidget {
+  const _PermissionRequestView({required this.onGrant});
+  final VoidCallback onGrant;
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: ModernSectionCard(
+          title: "Permission Required",
+          icon: Icons.security_rounded,
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
           children: [
-            const Icon(Icons.error_outline, size: 48),
+            const Text(
+              "Bluetooth Connect permission is required to view paired devices on Android 12+.",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
+            FilledButton.icon(
+              onPressed: onGrant,
+              icon: const Icon(Icons.check_circle_rounded),
+              label: const Text("Grant Permission"),
+            ),
           ],
         ),
       ),

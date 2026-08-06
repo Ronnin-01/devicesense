@@ -1,6 +1,6 @@
-import '../../core/permissions/permission_result.dart';
-import '../../core/permissions/permission_type.dart';
-import '../../core/platform/native_channel.dart';
+import '../../../core/permissions/permission_result.dart';
+import '../../../core/permissions/permission_type.dart';
+import '../../../core/platform/native_channel.dart';
 import 'hardware_repository.dart';
 
 class HardwareRepositoryImpl implements HardwareRepository {
@@ -23,26 +23,26 @@ class HardwareRepositoryImpl implements HardwareRepository {
 
   @override
   Future<Map<String, dynamic>> getBluetoothInfo() {
-    return NativeChannel.getBluetoothInfo();
+    return NativeChannel.getBluetoothCapabilities();
   }
 
   @override
   Future<PermissionResult> check(PermissionType permission) async {
-    final status = await NativeChannel.check(permission);
+    final status = await NativeChannel.checkPermission(permission);
 
     return PermissionResult(status: status, permission: permission);
   }
 
   @override
   Future<PermissionResult> request(PermissionType permission) async {
-    final status = await NativeChannel.request(permission);
+    final status = await NativeChannel.requestPermission(permission);
 
     return PermissionResult(status: status, permission: permission);
   }
 
   @override
   Future<void> openSettings() {
-    return NativeChannel.openSettings();
+    return NativeChannel.openAppSettings();
   }
 
   @override

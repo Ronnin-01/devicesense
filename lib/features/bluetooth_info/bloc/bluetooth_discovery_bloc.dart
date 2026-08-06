@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/repositories/bluetooth_repository.dart';
+import '../../../data/repositories/bluetooth/bluetooth_repository.dart';
 import '../models/bluetooth_discovery_snapshot.dart';
 import 'bluetooth_discovery_event.dart';
 import 'bluetooth_discovery_state.dart';

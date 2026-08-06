@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/repositories/hardware_repository.dart';
+import '../../../data/repositories/hardware/hardware_repository.dart';
 import 'device_info_event.dart';
 import 'device_info_state.dart';
 

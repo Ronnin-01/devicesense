@@ -8,7 +8,7 @@ import 'package:logger/logger.dart';
 
 import '../../core/di/service_locator.dart';
 import '../battery_info/bloc/battery_info_bloc.dart';
-import '../shared/widgets.dart';
+import '../shared/reusable_widgets.dart';
 
 class BatteryInfoPage extends StatelessWidget {
   const BatteryInfoPage({super.key});
@@ -24,6 +24,10 @@ class BatteryInfoPage extends StatelessWidget {
 
 class _BatteryInfoView extends StatelessWidget {
   const _BatteryInfoView();
+
+  // ===========================================================================
+  // Data Parsing Methods (Preserved exactly as requested)
+  // ===========================================================================
 
   String _batteryLevel(Map<String, dynamic> data) {
     return '${data['level'] ?? '--'}%';
@@ -46,8 +50,6 @@ class _BatteryInfoView extends StatelessWidget {
     if (value == null) return 'Unknown';
     return '$value mV';
   }
-
-  // BatteryManager electrical readings --------------------------
 
   String _currentNow(Map<String, dynamic> data) {
     final raw = data['currentNowMicroAmps'];
@@ -78,8 +80,6 @@ class _BatteryInfoView extends StatelessWidget {
     return value == true ? 'Yes' : 'No';
   }
 
-  //  PowerManager state -------------------------------------------
-
   String _thermalStatus(Map<String, dynamic> data) {
     final value = data['thermalStatus'];
     if (value == null) return 'Not available (Android 10+ only)';
@@ -93,58 +93,77 @@ class _BatteryInfoView extends StatelessWidget {
     return _yesNo(data, 'isDeviceIdleMode');
   }
 
+  String _lastUpdated(Map<String, dynamic> data) {
+    final timestamp = data['timestamp'];
+    if (timestamp == null || timestamp is! int) return 'Unknown';
+
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    // Format to a readable string like "14:30:45"
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+  }
+
+  // ===========================================================================
+  // UI Build Method
+  // ===========================================================================
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Battery Information'),
         actions: [
-          IconButton(
+          IconButton.filledTonal(
             icon: const Icon(Icons.show_chart_rounded),
             tooltip: 'View trends',
             onPressed: () => context.push('/battery/trends'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocBuilder<BatteryInfoBloc, BatteryInfoState>(
         builder: (context, state) {
           if (state is BatteryInfoInitial || state is BatteryInfoLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Reading battery sensors...'),
+                ],
+              ),
+            );
           }
 
           if (state is BatteryInfoError) {
-            final theme = Theme.of(context);
-
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: ModernSectionCard(
+                  title: "Error Reading Data",
+                  icon: Icons.battery_alert_rounded,
+                  backgroundColor: theme.colorScheme.errorContainer,
                   children: [
-                    Icon(
-                      Icons.battery_alert_rounded,
-                      size: 40,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Couldn't load battery information",
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
                     Text(
                       state.message,
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () {
-                        context.read<BatteryInfoBloc>().add(
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => context.read<BatteryInfoBloc>().add(
                           const BatteryInfoRequested(),
-                        );
-                      },
-                      child: const Text('Retry'),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
                     ),
                   ],
                 ),
@@ -153,163 +172,281 @@ class _BatteryInfoView extends StatelessWidget {
           }
 
           final data = (state as BatteryInfoLoaded).data;
-          final history = (state).history;
-          final logger = Logger();
-          logger.d('Battery Info Data: $history');
+          final history = state.history;
+          Logger().d('Battery Info Data: $history');
 
           String field(String key) => (data[key] ?? 'Unknown').toString();
+
+          final isCharging = data['isCharging'] == true;
+          final levelStr = _batteryLevel(data);
 
           return RefreshIndicator(
             onRefresh: () async {
               context.read<BatteryInfoBloc>().add(const BatteryInfoRequested());
-
               await context.read<BatteryInfoBloc>().stream.firstWhere(
                 (state) => state is! BatteryInfoLoading,
               );
             },
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               children: [
-                SectionCard(
-                  title: 'Battery Status',
-                  icon: Icons.battery_full_outlined,
+                // 1. Hero Summary Banner
+                _buildHeroBanner(
+                  context,
+                  isCharging,
+                  levelStr,
+                  _chargingStatus(data),
+                  _lastUpdated(data),
+                ),
+                const SizedBox(height: 24),
+
+                // 2. Electrical Readings Grid
+                ModernSectionCard(
+                  title: 'Electrical Metrics',
+                  icon: Icons.bolt_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: 'Battery Level',
-                      value: _batteryLevel(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Level (secondary reading)',
-                      value: _levelCrossCheck(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Status',
-                      value: _chargingStatus(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'OS Charging Flag',
-                      value: _yesNo(data, 'isChargingFlag'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Charging Source',
-                      value: field('chargingSource'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Battery Present',
-                      value: _yesNo(data, 'isBatteryPresent'),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Calculate the exact width for 2 columns by taking the max available width,
+                        // subtracting the 12px spacing between the two items, and dividing by 2.
+                        final double tileWidth =
+                            (constraints.maxWidth - 12) / 2;
+
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Voltage',
+                              value: _voltage(data),
+                              icon: Icons.speed_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Temperature',
+                              value: _temperature(data),
+                              icon: Icons.thermostat_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Current Draw',
+                              value: _currentNow(data),
+                              icon: Icons.electric_meter_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Charge Remaining',
+                              value: _chargeCounter(data),
+                              icon: Icons.battery_charging_full_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
 
-                SectionCard(
-                  title: 'Battery Health',
-                  icon: Icons.health_and_safety_outlined,
+                // 3. Health & Hardware
+                ModernSectionCard(
+                  title: 'Health & Hardware',
+                  icon: Icons.health_and_safety_rounded,
                   children: [
-                    ExpandableInfoTile(title: 'Health', value: field('health')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Technology',
-                      value: field('technology'),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Calculate the exact width for 2 columns by taking the max available width,
+                        // subtracting the 12px spacing between the two items, and dividing by 2.
+                        final double tileWidth =
+                            (constraints.maxWidth - 12) / 2;
+
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Battery Health',
+                              value: field('health'),
+                              icon: Icons.monitor_heart_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Technology',
+                              value: field('technology'),
+                              icon: Icons.science_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Charging Source',
+                              value: field('chargingSource'),
+                              icon: Icons.power_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Battery Present',
+                              value: _yesNo(data, 'isBatteryPresent'),
+                              icon: Icons.check_circle_outline_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
 
-                SectionCard(
-                  title: 'Electrical Readings',
-                  icon: Icons.bolt_outlined,
+                // 4. Power State & OS Flags
+                ModernSectionCard(
+                  title: 'Power State & OS Flags',
+                  icon: Icons.settings_power_rounded,
                   children: [
-                    ExpandableInfoTile(
-                      title: 'Current Draw',
-                      value: _currentNow(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Charge Remaining',
-                      value: _chargeCounter(data),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Calculate the exact width for 2 columns by taking the max available width,
+                        // subtracting the 12px spacing between the two items, and dividing by 2.
+                        final double tileWidth =
+                            (constraints.maxWidth - 12) / 2;
+
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Battery Saver',
+                              value: _yesNo(data, 'isPowerSaveMode'),
+                              icon: Icons.eco_rounded,
+                              isSupported: data['isPowerSaveMode'] == true,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Doze Mode',
+                              value: _dozeMode(data),
+                              icon: Icons.bedtime_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Screen Interactive',
+                              value: _yesNo(data, 'isScreenInteractive'),
+                              icon: Icons.touch_app_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Thermal Status',
+                              value: _thermalStatus(data),
+                              icon: Icons.local_fire_department_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'OS Charging Flag',
+                              value: _yesNo(data, 'isChargingFlag'),
+                              icon: Icons.flag_rounded,
+                            ),
+                            ModernDetailTile(
+                              width: tileWidth,
+                              label: 'Level (Broadcast)',
+                              value: _levelCrossCheck(data),
+                              icon: Icons.cell_tower_rounded,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 16),
-
-                SectionCard(
-                  title: 'Battery Metrics',
-                  icon: Icons.analytics_outlined,
-                  children: [
-                    ExpandableInfoTile(title: 'Voltage', value: _voltage(data)),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Temperature',
-                      value: _temperature(data),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                SectionCard(
-                  title: 'Power State',
-                  icon: Icons.settings_power_outlined,
-                  children: [
-                    ExpandableInfoTile(
-                      title: 'Battery Saver',
-                      value: _yesNo(data, 'isPowerSaveMode'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Screen Interactive',
-                      value: _yesNo(data, 'isScreenInteractive'),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Doze Mode',
-                      value: _dozeMode(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Thermal Status',
-                      value: _thermalStatus(data),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                SectionCard(
-                  title: 'Quick Summary',
-                  icon: Icons.info_outline_rounded,
-                  children: [
-                    ExpandableInfoTile(
-                      title: 'Battery Level',
-                      value: _batteryLevel(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(title: 'Health', value: field('health')),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Charging',
-                      value: _chargingStatus(data),
-                    ),
-                    const Divider(),
-                    ExpandableInfoTile(
-                      title: 'Temperature',
-                      value: _temperature(data),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 32), // Bottom padding
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // Custom Visual Hero Card
+  // ===========================================================================
+  Widget _buildHeroBanner(
+    BuildContext context,
+    bool isCharging,
+    String levelStr,
+    String chargingStr,
+    String lastUpdatedStr,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final gradientColors = isCharging
+        ? [Colors.green.shade400, Colors.green.shade700]
+        : [colorScheme.primary, colorScheme.tertiary];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.last.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCharging
+                  ? Icons.battery_charging_full_rounded
+                  : Icons.battery_std_rounded,
+              size: 42,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  levelStr,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    StatusBadgeTag(label: chargingStr, color: Colors.white),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Text(
+            "Snapshot Taken At",
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w400,
+              letterSpacing: -1,
+            ),
+          ),
+          SizedBox(width: 4),
+          StatusBadgeTag(label: lastUpdatedStr, color: Colors.white),
+        ],
       ),
     );
   }

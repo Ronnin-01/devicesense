@@ -5,9 +5,11 @@ class AppTheme {
 
   static const _seedColor = Color(0xFF3D5AFE);
 
+  // App-wide radius tokens[cite: 13]
   static const double radiusLarge = 24;
   static const double radiusMedium = 16;
   static const double radiusSmall = 12;
+  static const double radiusExtraSmall = 8;
 
   static ThemeData get light => _base(Brightness.light);
   static ThemeData get dark => _base(Brightness.dark);
@@ -23,6 +25,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
+      splashFactory: InkSparkle.splashFactory,
     );
 
     return base.copyWith(
@@ -57,8 +60,32 @@ class AppTheme {
       listTileTheme: ListTileThemeData(
         iconColor: scheme.onSurfaceVariant,
         textColor: scheme.onSurface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+        ),
       ),
-      splashFactory: InkSparkle.splashFactory,
+      expansionTileTheme: ExpansionTileThemeData(
+        shape: const RoundedRectangleBorder(side: BorderSide.none),
+        collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
+        iconColor: scheme.primary,
+        collapsedIconColor: scheme.onSurfaceVariant,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusSmall),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusSmall),
+          ),
+        ),
+      ),
     );
   }
 
@@ -73,6 +100,7 @@ class AppTheme {
         letterSpacing: -0.2,
       ),
       titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      bodyLarge: base.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
       bodyMedium: base.bodyMedium?.copyWith(
         color: scheme.onSurfaceVariant,
         height: 1.4,

@@ -49,7 +49,7 @@ class PermissionDeniedError extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: NativeChannel.openSettings,
+              onPressed: NativeChannel.openAppSettings,
               icon: const Icon(Icons.settings_rounded),
               label: const Text('Open App Settings'),
             ),

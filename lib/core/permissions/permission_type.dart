@@ -9,4 +9,6 @@ enum PermissionType {
   bluetoothScan,
   location,
   notification,
+  nearbyWifiDevices,
+  sensors,
 }
