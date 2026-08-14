@@ -212,8 +212,7 @@ class _DashboardView extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-
-                      // Row 4: Wide NFC Card
+                      // Row 4: NFC (Near Field Communication)
                       BentoCard(
                         isWide: true,
                         icon: Icons.nfc_rounded,

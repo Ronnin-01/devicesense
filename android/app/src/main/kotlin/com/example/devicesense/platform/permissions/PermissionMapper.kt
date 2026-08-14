@@ -100,6 +100,21 @@ object PermissionMapper {
                                                 runtimeRequired = false,
                                         )
                                 }
+                        PermissionType.ACTIVITY_RECOGNITION ->
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+
+                                        PermissionInfo(
+                                                manifestPermission =
+                                                        Manifest.permission.ACTIVITY_RECOGNITION,
+                                                runtimeRequired = true,
+                                        )
+                                } else {
+
+                                        PermissionInfo(
+                                                manifestPermission = "",
+                                                runtimeRequired = false,
+                                        )
+                                }
                 }
         }
 }

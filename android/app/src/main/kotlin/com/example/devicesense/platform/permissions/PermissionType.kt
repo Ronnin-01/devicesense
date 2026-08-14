@@ -13,7 +13,8 @@ enum class PermissionType {
     LOCATION,
     NOTIFICATION,
     NEARBY_WIFI_DEVICES,
-    SENSORS;
+    SENSORS,
+    ACTIVITY_RECOGNITION;
 
     companion object {
 
@@ -30,6 +31,7 @@ enum class PermissionType {
                 "BLUETOOTH_SCAN" -> BLUETOOTH_SCAN
                 "nearbyWifiDevices" -> NEARBY_WIFI_DEVICES
                 "sensors" -> SENSORS
+                "activityRecognition" -> ACTIVITY_RECOGNITION
                 else ->
                         throw IllegalArgumentException(
                                 "Unknown permission type: $value",

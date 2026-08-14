@@ -11,4 +11,5 @@ enum PermissionType {
   notification,
   nearbyWifiDevices,
   sensors,
+  activityRecognition,
 }

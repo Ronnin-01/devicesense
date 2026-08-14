@@ -64,6 +64,15 @@ class NativeChannel {
     'device_sense/nfc_reader_control',
   );
 
+  // Sensors channels
+  static const String _sensorChannelName = 'device_sense/sensor';
+  static const MethodChannel _sensorChannel = MethodChannel(_sensorChannelName);
+
+  static const String _sensorStreamChannelName = 'device_sense/sensor_stream';
+  static const EventChannel _sensorStreamChannel = EventChannel(
+    _sensorStreamChannelName,
+  );
+
   // ===========================================================================
   // Device Info
   // ===========================================================================
@@ -361,5 +370,74 @@ class NativeChannel {
       'stopNfcReader',
     );
     return result ?? false;
+  }
+
+  /// Opens a broadcast stream of live sensor events from native.
+  ///
+  /// Events may include:
+  /// - sensorData
+  /// - sensorAccuracyChanged
+  static Stream<Map<String, dynamic>> sensorStream() {
+    return _sensorStreamChannel.receiveBroadcastStream().map(
+      (event) => Map<String, dynamic>.from(event as Map),
+    );
+  }
+
+  /// Fetches a full catalog of sensors available on the device.
+  static Future<Map<String, dynamic>> getSensorsCapabilities() async {
+    final result = await _sensorChannel.invokeMapMethod<String, dynamic>(
+      'getSensorsCapabilities',
+    );
+    return result ?? {};
+  }
+
+  /// Starts one sensor stream by Android sensor type id.
+  /// Example: Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE, etc.
+  static Future<Map<String, dynamic>> startSensor({
+    required int type,
+    int? samplingPeriodUs,
+  }) async {
+    final result = await _sensorChannel
+        .invokeMapMethod<String, dynamic>('startSensor', {
+          'type': type,
+          if (samplingPeriodUs != null) 'samplingPeriodUs': samplingPeriodUs,
+        });
+    return result ?? {};
+  }
+
+  /// Stops one active sensor stream by Android sensor type id.
+  static Future<Map<String, dynamic>> stopSensor({required int type}) async {
+    final result = await _sensorChannel.invokeMapMethod<String, dynamic>(
+      'stopSensor',
+      {'type': type},
+    );
+    return result ?? {};
+  }
+
+  /// Starts all available sensors that can be registered on the device.
+  static Future<Map<String, dynamic>> startAllSensors({
+    int? samplingPeriodUs,
+  }) async {
+    final result = await _sensorChannel.invokeMapMethod<String, dynamic>(
+      'startAllSensors',
+      {'samplingPeriodUs': ?samplingPeriodUs},
+    );
+    return result ?? {};
+  }
+
+  /// Stops every active sensor listener.
+  static Future<Map<String, dynamic>> stopAllSensors() async {
+    final result = await _sensorChannel.invokeMapMethod<String, dynamic>(
+      'stopAllSensors',
+    );
+    return result ?? {};
+  }
+
+  /// Returns the list of currently active sensors on the native side.
+  static Future<Map<String, dynamic>> getActiveSensors() async {
+    final result = await _sensorChannel.invokeMapMethod<String, dynamic>(
+      'getActiveSensors',
+    );
+    return result ?? {};
   }
 }

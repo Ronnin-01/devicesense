@@ -6,6 +6,8 @@ import '../../data/repositories/bluetooth/bluetooth_repository_impl.dart';
 import '../../data/repositories/hardware/hardware_repository.dart';
 import '../../data/repositories/hardware/hardware_repository_impl.dart';
 import '../../data/repositories/nfc/nfc_reader_repository.dart';
+import '../../data/repositories/sensors/sensors_repository.dart';
+import '../../data/repositories/sensors/sensors_repository_impl.dart';
 import '../../data/repositories/wifi/wifi_capabilities_repository.dart';
 import '../../data/repositories/wifi/wifi_capabilities_repository_impl.dart';
 import '../../data/repositories/wifi/wifi_info_repository.dart';
@@ -18,6 +20,7 @@ import '../../features/device_info/bloc/device_info_bloc.dart';
 import '../../features/nfc/bloc/nfc_capabilities_bloc/nfc_capabilities_bloc.dart';
 import '../../features/nfc/bloc/nfc_reader_bloc/nfc_reader_bloc.dart';
 import '../../features/permissions/bloc/permission_bloc.dart';
+import '../../features/sensors/bloc/sensors_bloc.dart';
 import '../../features/wifi/bloc/capabilities/wifi_capabilities_bloc.dart';
 import '../../features/wifi/bloc/info/wifi_info_bloc.dart';
 import '../../features/wifi/bloc/scan/wifi_scan_bloc.dart';
@@ -49,6 +52,9 @@ Future<void> setupServiceLocator() async {
     () => NfcReaderRepositoryImpl(),
   );
 
+  // Sensors repository
+  sl.registerFactory<SensorsRepository>(() => SensorsRepositoryImpl());
+
   // --- Presentation layer --------------------------------------------
   // Factory: a *fresh* Bloc per page. Blocs hold mutable, page-scoped
 
@@ -68,5 +74,9 @@ Future<void> setupServiceLocator() async {
   sl.registerFactory(() => NfcCapabilitiesBloc(sl<NfcReaderRepository>()));
   sl.registerFactory(
     () => NfcReaderBloc(repository: sl<NfcReaderRepository>()),
+  );
+  // Sensors — bloc
+  sl.registerFactory<SensorsBloc>(
+    () => SensorsBloc(repository: sl<SensorsRepository>()),
   );
 }

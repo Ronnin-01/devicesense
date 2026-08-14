@@ -3,6 +3,8 @@ package com.example.devicesense
 import com.example.devicesense.platform.BluetoothDiscoveryHandler
 import com.example.devicesense.platform.NativeBridge
 import com.example.devicesense.platform.NfcReaderHandler
+import com.example.devicesense.platform.SensorStreamHandler
+import com.example.devicesense.platform.SensorsCapabilitiesHandler
 import com.example.devicesense.platform.WifiScanHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,13 +17,20 @@ class MainActivity : FlutterActivity() {
         private lateinit var bluetoothDiscoveryHandler: BluetoothDiscoveryHandler
         private lateinit var wifiScanHandler: WifiScanHandler
         private lateinit var nfcReaderHandler: NfcReaderHandler
+        private lateinit var sensorStreamHandler: SensorStreamHandler
+        private lateinit var sensorsCapabilitiesHandler: SensorsCapabilitiesHandler
 
         override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
                 super.configureFlutterEngine(flutterEngine)
 
-                // ---- Method channel (all MethodHandlers via NativeBridge) --------
-                // WifiCapabilitiesHandler and WifiInfoHandler are registered inside
-                // NativeBridge because they are simple request/response handlers.
+                setupNativeBridge(flutterEngine)
+                setupBluetoothDiscoveryChannels(flutterEngine)
+                setupNfcChannels(flutterEngine)
+                setupWifiScanChannels(flutterEngine)
+                setupSensorChannels(flutterEngine)
+        }
+
+        private fun setupNativeBridge(flutterEngine: FlutterEngine) {
                 nativeBridge =
                         NativeBridge(
                                 activity = this,
@@ -35,9 +44,9 @@ class MainActivity : FlutterActivity() {
                         .setMethodCallHandler { call, result ->
                                 nativeBridge.onMethodCall(call, result)
                         }
+        }
 
-                // ---- Bluetooth discovery (EventChannel + control MethodChannel) --
-
+        private fun setupBluetoothDiscoveryChannels(flutterEngine: FlutterEngine) {
                 bluetoothDiscoveryHandler = BluetoothDiscoveryHandler(applicationContext)
 
                 MethodChannel(
@@ -53,23 +62,27 @@ class MainActivity : FlutterActivity() {
                                 DISCOVERY_CHANNEL,
                         )
                         .setStreamHandler(bluetoothDiscoveryHandler)
+        }
 
-                // ---- NFC reader (EventChannel + control MethodChannel) -----------
+        private fun setupNfcChannels(flutterEngine: FlutterEngine) {
                 nfcReaderHandler = NfcReaderHandler(this)
+
                 MethodChannel(
                                 flutterEngine.dartExecutor.binaryMessenger,
-                                NFC_READER_CONTROL_CHANNEL
+                                NFC_READER_CONTROL_CHANNEL,
                         )
                         .setMethodCallHandler { call, result ->
                                 nfcReaderHandler.handleControlCall(call, result)
                         }
-                EventChannel(flutterEngine.dartExecutor.binaryMessenger, NFC_READER_CHANNEL)
+
+                EventChannel(
+                                flutterEngine.dartExecutor.binaryMessenger,
+                                NFC_READER_CHANNEL,
+                        )
                         .setStreamHandler(nfcReaderHandler)
+        }
 
-                // ---- Wi-Fi scan (EventChannel + control MethodChannel) -----------
-                // Mirrors the Bluetooth discovery pattern exactly so the Dart side
-                // can follow the same repository/bloc pattern.
-
+        private fun setupWifiScanChannels(flutterEngine: FlutterEngine) {
                 wifiScanHandler = WifiScanHandler(applicationContext)
 
                 MethodChannel(
@@ -87,34 +100,92 @@ class MainActivity : FlutterActivity() {
                         .setStreamHandler(wifiScanHandler)
         }
 
+        private fun setupSensorChannels(flutterEngine: FlutterEngine) {
+                sensorsCapabilitiesHandler = SensorsCapabilitiesHandler(applicationContext)
+
+                // SensorStreamHandler in your shared code takes only Activity.
+                sensorStreamHandler = SensorStreamHandler(this, applicationContext)
+
+                MethodChannel(
+                                flutterEngine.dartExecutor.binaryMessenger,
+                                SENSORS_CHANNEL,
+                        )
+                        .setMethodCallHandler { call, result ->
+                                when (call.method) {
+                                        "getSensorsCapabilities" ->
+                                                sensorsCapabilitiesHandler.handle(call, result)
+                                        "startSensor",
+                                        "stopSensor",
+                                        "startAllSensors",
+                                        "stopAllSensors",
+                                        "getActiveSensors", ->
+                                                sensorStreamHandler.handleControlCall(call, result)
+                                        else -> result.notImplemented()
+                                }
+                        }
+
+                EventChannel(
+                                flutterEngine.dartExecutor.binaryMessenger,
+                                SENSORS_STREAM_CHANNEL,
+                        )
+                        .setStreamHandler(sensorStreamHandler)
+        }
+
         override fun onRequestPermissionsResult(
                 requestCode: Int,
                 permissions: Array<String>,
                 grantResults: IntArray,
         ) {
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-                nativeBridge.onRequestPermissionsResult(requestCode, permissions, grantResults)
+                super.onRequestPermissionsResult(
+                        requestCode,
+                        permissions,
+                        grantResults,
+                )
+
+                if (::nativeBridge.isInitialized) {
+                        nativeBridge.onRequestPermissionsResult(
+                                requestCode,
+                                permissions,
+                                grantResults,
+                        )
+                }
         }
 
         override fun onDestroy() {
-                bluetoothDiscoveryHandler.dispose()
-                wifiScanHandler.dispose()
+                if (::bluetoothDiscoveryHandler.isInitialized) {
+                        bluetoothDiscoveryHandler.dispose()
+                }
+
+                if (::wifiScanHandler.isInitialized) {
+                        wifiScanHandler.dispose()
+                }
+
+                if (::sensorStreamHandler.isInitialized) {
+                        sensorStreamHandler.dispose()
+                }
+
+                // Add this only if your NfcReaderHandler actually has a dispose() method.
+                // if (::nfcReaderHandler.isInitialized) {
+                //     nfcReaderHandler.dispose()
+                // }
+
                 super.onDestroy()
         }
 
         companion object {
-                // Existing channels — unchanged.
                 private const val CHANNEL = "device_sense/native"
+
                 private const val DISCOVERY_CHANNEL = "device_sense/bluetooth_discovery"
                 private const val DISCOVERY_CONTROL_CHANNEL =
                         "device_sense/bluetooth_discovery_control"
 
-                // New Wi-Fi channels — same naming convention.
                 private const val WIFI_SCAN_CHANNEL = "device_sense/wifi_scan"
                 private const val WIFI_SCAN_CONTROL_CHANNEL = "device_sense/wifi_scan_control"
 
-                // New NFC channels — same naming convention.
                 private const val NFC_READER_CHANNEL = "device_sense/nfc_reader"
                 private const val NFC_READER_CONTROL_CHANNEL = "device_sense/nfc_reader_control"
+
+                private const val SENSORS_STREAM_CHANNEL = "device_sense/sensor_stream"
+                private const val SENSORS_CHANNEL = "device_sense/sensor"
         }
 }

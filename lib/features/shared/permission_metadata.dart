@@ -48,13 +48,7 @@ class PermissionCatalog {
           'Required to discover new, unpaired Bluetooth Classic and BLE devices in the area.',
       icon: Icons.bluetooth_searching_rounded,
     ),
-    PermissionMetadata(
-      type: PermissionType.sensors,
-      title: 'Body & Hardware Sensors',
-      description:
-          'Grants access to the accelerometer, gyroscope, and step counters.',
-      icon: Icons.sensors_rounded,
-    ),
+
     PermissionMetadata(
       type: PermissionType.camera,
       title: 'Camera Access',
@@ -68,6 +62,20 @@ class PermissionCatalog {
       description:
           'Allows background workers (like battery sampling) to post status updates.',
       icon: Icons.notifications_rounded,
+    ),
+    PermissionMetadata(
+      type: PermissionType.activityRecognition,
+      title: 'Activity Recognition',
+      description:
+          'Allows the app to recognize and track user activities like walking, running, or cycling.',
+      icon: Icons.fitness_center_rounded,
+    ),
+    PermissionMetadata(
+      type: PermissionType.sensors,
+      title: 'Body & Hardware Sensors',
+      description:
+          'Grants access to the accelerometer, gyroscope, and step counters.',
+      icon: Icons.sensors_rounded,
     ),
   ];
 }

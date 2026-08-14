@@ -38,10 +38,12 @@
     android:name="android.permission.NEARBY_WIFI_DEVICES"
     android:usesPermissionFlags="neverForLocation" />
 
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
-
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
 
 
